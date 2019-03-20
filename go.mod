@@ -1,3 +1,3 @@
 module github.com/vargspjut/wlog
 
-go 1.12
+go 1.11
