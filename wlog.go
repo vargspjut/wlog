@@ -45,6 +45,10 @@ func (l LogLevel) String() string {
 	return "Unknown"
 }
 
+// HookFunc is a callback function triggered
+// when a log event occurs
+type HookFunc func(time.Time, LogLevel, string)
+
 var (
 	logger *Logger
 )
@@ -84,6 +88,7 @@ type Logger struct {
 	stdOut   bool
 	lock     sync.Mutex
 	buffer   []byte
+	hooks    map[LogLevel][]HookFunc
 }
 
 // Configure configures the logger
@@ -180,6 +185,19 @@ func (l *Logger) Fatal(v ...interface{}) {
 	os.Exit(1)
 }
 
+// InstallHook installs a hook that will be called when a log event occurs
+func (l *Logger) InstallHook(logLevel LogLevel, hook HookFunc) {
+
+	l.lock.Lock()
+	defer l.lock.Unlock()
+
+	if l.hooks == nil {
+		l.hooks = make(map[LogLevel][]HookFunc)
+	}
+
+	l.hooks[logLevel] = append(l.hooks[logLevel], hook)
+}
+
 // Write writes a log entry to file and possibly to standard output
 func (l *Logger) Write(logLevel LogLevel, msg string) {
 
@@ -251,6 +269,13 @@ func (l *Logger) Write(logLevel LogLevel, msg string) {
 			os.Stderr.Write(l.buffer)
 		} else {
 			os.Stdout.Write(l.buffer)
+		}
+	}
+
+	// Call any installed hooks
+	if l.hooks != nil {
+		for _, h := range l.hooks[logLevel] {
+			h(now, logLevel, msg)
 		}
 	}
 }
@@ -331,6 +356,12 @@ func Fatal(v ...interface{}) {
 	logger.Fatal(v...)
 }
 
+// InstallHook installs a hook to the default logger
+// that will be called when a log event occurs
+func InstallHook(logLevel LogLevel, hook HookFunc) {
+	logger.InstallHook(logLevel, hook)
+}
+
 // SetWriter sets or clears the writer of the default logger
 func SetWriter(writer io.Writer) {
 	logger.SetWriter(writer)
@@ -368,4 +399,3 @@ func itoa(buf *[]byte, i int, wid int) {
 	b[bp] = byte('0' + i)
 	*buf = append(*buf, b[bp:]...)
 }
-
