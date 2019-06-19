@@ -55,12 +55,12 @@ A logging hook is a function callback that can be used to perform common tasks w
 // Code left out for brevity
 
 // Install a hook to catch all Info messages
-wlog.InstallHook(wlog.Nfo, func(timestamp time.Time, l LogLevel, msg string){
+wlog.InstallHook(wlog.Nfo, func(timestamp time.Time, l wlog.LogLevel, msg string){
   // Perform some action here for all Info log events
 })
 
 // Install a hook to catch all Error messages
-wlog.InstallHook(wlog.Err, func(timestamp time.Time, l LogLevel, msg string){
+wlog.InstallHook(wlog.Err, func(timestamp time.Time, l wlog.LogLevel, msg string){
   // Perform some action here for all Error log events
 })
 
