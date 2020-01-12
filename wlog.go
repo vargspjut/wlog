@@ -46,7 +46,7 @@ func (l LogLevel) String() string {
 }
 
 // HookFunc is a callback function triggered
-// when a write event occurs
+// when a log event occurs
 type HookFunc func(time.Time, LogLevel, string)
 
 var (
@@ -128,7 +128,7 @@ func (l *Logger) WithContext(f Fields) *LoggerContext {
 // Debugf formats and logs a debug message
 func (l *Logger) Debugf(format string, v ...interface{}) {
 
-	// Debug is very verbose. Catch write-level early
+	// Debug is very verbose. Catch log-level early
 	// to save unnecessary parsing
 	if Dbg < l.logLevel {
 		return
@@ -140,7 +140,7 @@ func (l *Logger) Debugf(format string, v ...interface{}) {
 // Debug logs a debug message
 func (l *Logger) Debug(v ...interface{}) {
 
-	// Debug is very verbose. Catch write-level early
+	// Debug is very verbose. Catch log-level early
 	// to save unnecessary parsing
 	if Dbg < l.logLevel {
 		return
@@ -191,7 +191,7 @@ func (l *Logger) Fatal(v ...interface{}) {
 	os.Exit(1)
 }
 
-// InstallHook installs a hook that will be called when a write event occurs
+// InstallHook installs a hook that will be called when a log event occurs
 func (l *Logger) InstallHook(logLevel LogLevel, hook HookFunc) {
 
 	l.lock.Lock()
@@ -204,7 +204,7 @@ func (l *Logger) InstallHook(logLevel LogLevel, hook HookFunc) {
 	l.hooks[logLevel] = append(l.hooks[logLevel], hook)
 }
 
-// Write writes a write entry to file and possibly to standard output
+// Write writes a log entry to file and possibly to standard output
 func (l *Logger) Write(logLevel LogLevel, msg string) {
 
 	if logLevel < l.logLevel {
@@ -258,7 +258,7 @@ func (l *Logger) Write(logLevel LogLevel, msg string) {
 
 	l.buffer = append(l.buffer, level...)
 
-	// Append write message to buffer
+	// Append log message to buffer
 	l.buffer = append(l.buffer, msg...)
 	if len(msg) == 0 || msg[len(msg)-1] != '\n' {
 		l.buffer = append(l.buffer, '\n')
@@ -300,7 +300,7 @@ func (l *Logger) SetWriter(writer io.Writer) {
 	l.writer = writer
 }
 
-// SetLogLevel sets the write level of the logger
+// SetLogLevel sets the log level of the logger
 func (l *Logger) SetLogLevel(logLevel LogLevel) {
 	l.lock.Lock()
 	defer l.lock.Unlock()
@@ -370,7 +370,7 @@ func Fatal(v ...interface{}) {
 }
 
 // InstallHook installs a hook to the default logger
-// that will be called when a write event occurs
+// that will be called when a log event occurs
 func InstallHook(logLevel LogLevel, hook HookFunc) {
 	logger.InstallHook(logLevel, hook)
 }
@@ -380,7 +380,7 @@ func SetWriter(writer io.Writer) {
 	logger.SetWriter(writer)
 }
 
-// SetLogLevel sets the write level of the default logger
+// SetLogLevel sets the log level of the default logger
 func SetLogLevel(logLevel LogLevel) {
 	logger.SetLogLevel(logLevel)
 }
@@ -404,7 +404,7 @@ func SetFormatter(formatter Formatter) {
 }
 
 // Cheap integer to fixed-width decimal ASCII. Give a negative width to avoid zero-padding.
-// NOTE: Taken from Go's std write package
+// NOTE: Taken from Go's std log package
 func itoa(buf *[]byte, i int, wid int) {
 	// Assemble decimal in reverse order.
 	var b [20]byte
