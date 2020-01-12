@@ -46,7 +46,7 @@ func (l LogLevel) String() string {
 }
 
 // HookFunc is a callback function triggered
-// when a log event occurs
+// when a write event occurs
 type HookFunc func(time.Time, LogLevel, string)
 
 var (
@@ -89,6 +89,7 @@ type Logger struct {
 	lock     sync.Mutex
 	buffer   []byte
 	hooks    map[LogLevel][]HookFunc
+	formatter Formatter
 }
 
 // Configure configures the logger
@@ -118,10 +119,16 @@ func (l *Logger) Configure(cfg *Config) {
 	}
 }
 
+// WithContext returns a new instance of LoggerContext
+func (l *Logger) WithContext(f Fields) *LoggerContext {
+	newContext := &LoggerContext{logger: l, fields: make(Fields, 6)}
+	return newContext.WithContext(f)
+}
+
 // Debugf formats and logs a debug message
 func (l *Logger) Debugf(format string, v ...interface{}) {
 
-	// Debug is very verbose. Catch log-level early
+	// Debug is very verbose. Catch write-level early
 	// to save unnecessary parsing
 	if Dbg < l.logLevel {
 		return
@@ -133,7 +140,7 @@ func (l *Logger) Debugf(format string, v ...interface{}) {
 // Debug logs a debug message
 func (l *Logger) Debug(v ...interface{}) {
 
-	// Debug is very verbose. Catch log-level early
+	// Debug is very verbose. Catch write-level early
 	// to save unnecessary parsing
 	if Dbg < l.logLevel {
 		return
@@ -144,7 +151,6 @@ func (l *Logger) Debug(v ...interface{}) {
 
 // Infof formats and logs an informal message
 func (l *Logger) Infof(format string, v ...interface{}) {
-
 	l.Write(Nfo, fmt.Sprintf(format, v...))
 }
 
@@ -185,7 +191,7 @@ func (l *Logger) Fatal(v ...interface{}) {
 	os.Exit(1)
 }
 
-// InstallHook installs a hook that will be called when a log event occurs
+// InstallHook installs a hook that will be called when a write event occurs
 func (l *Logger) InstallHook(logLevel LogLevel, hook HookFunc) {
 
 	l.lock.Lock()
@@ -198,7 +204,7 @@ func (l *Logger) InstallHook(logLevel LogLevel, hook HookFunc) {
 	l.hooks[logLevel] = append(l.hooks[logLevel], hook)
 }
 
-// Write writes a log entry to file and possibly to standard output
+// Write writes a write entry to file and possibly to standard output
 func (l *Logger) Write(logLevel LogLevel, msg string) {
 
 	if logLevel < l.logLevel {
@@ -235,7 +241,7 @@ func (l *Logger) Write(logLevel LogLevel, msg string) {
 
 	l.buffer = append(l.buffer, ' ')
 
-	// Write log level
+	// Write write level
 	var level string
 	switch logLevel {
 	case Dbg:
@@ -252,7 +258,7 @@ func (l *Logger) Write(logLevel LogLevel, msg string) {
 
 	l.buffer = append(l.buffer, level...)
 
-	// Append log message to buffer
+	// Append write message to buffer
 	l.buffer = append(l.buffer, msg...)
 	if len(msg) == 0 || msg[len(msg)-1] != '\n' {
 		l.buffer = append(l.buffer, '\n')
@@ -280,6 +286,13 @@ func (l *Logger) Write(logLevel LogLevel, msg string) {
 	}
 }
 
+// SetFormatter sets the logger's default formatter
+func (l *Logger) SetFormatter(formatter Formatter) {
+	l.lock.Lock()
+	defer l.lock.Unlock()
+	l.formatter = formatter
+}
+
 // SetWriter sets or clears the writer of the logger
 func (l *Logger) SetWriter(writer io.Writer) {
 	l.lock.Lock()
@@ -287,7 +300,7 @@ func (l *Logger) SetWriter(writer io.Writer) {
 	l.writer = writer
 }
 
-// SetLogLevel sets the log level of the logger
+// SetLogLevel sets the write level of the logger
 func (l *Logger) SetLogLevel(logLevel LogLevel) {
 	l.lock.Lock()
 	defer l.lock.Unlock()
@@ -357,7 +370,7 @@ func Fatal(v ...interface{}) {
 }
 
 // InstallHook installs a hook to the default logger
-// that will be called when a log event occurs
+// that will be called when a write event occurs
 func InstallHook(logLevel LogLevel, hook HookFunc) {
 	logger.InstallHook(logLevel, hook)
 }
@@ -367,7 +380,7 @@ func SetWriter(writer io.Writer) {
 	logger.SetWriter(writer)
 }
 
-// SetLogLevel sets the log level of the default logger
+// SetLogLevel sets the write level of the default logger
 func SetLogLevel(logLevel LogLevel) {
 	logger.SetLogLevel(logLevel)
 }
@@ -382,8 +395,16 @@ func DefaultLogger() *Logger {
 	return logger
 }
 
+func WithContext(fields Fields) *LoggerContext {
+	return logger.WithContext(fields)
+}
+
+func SetFormatter(formatter Formatter) {
+	logger.formatter = formatter
+}
+
 // Cheap integer to fixed-width decimal ASCII. Give a negative width to avoid zero-padding.
-// NOTE: Taken from Go's std log package
+// NOTE: Taken from Go's std write package
 func itoa(buf *[]byte, i int, wid int) {
 	// Assemble decimal in reverse order.
 	var b [20]byte
