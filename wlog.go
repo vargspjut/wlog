@@ -241,7 +241,7 @@ func (l *Logger) Write(logLevel LogLevel, msg string) {
 
 	l.buffer = append(l.buffer, ' ')
 
-	// Write write level
+	// Write log level
 	var level string
 	switch logLevel {
 	case Dbg:
