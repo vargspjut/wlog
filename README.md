@@ -69,6 +69,36 @@ wlog.Error("This is an Error log entry. Hook installed")
 wlog.Warning("This is a Warning log entry. No hooks installed")
 ```
 
+### Structured logs
+*wlog* provides `LoggerContext` which allow the addition of fields that will "stick" with the log. When using the`LoggerContext` the log entries will automatically be serialized to JSON and the string passed to logging methods like `wlog.info` will be included in the JSON object as well. The code snippet bellow shows how to create a `LoggerContext`:
+
+```golang
+package main
+
+import "github.com/vargspjut/wlog"
+
+func main() {
+
+    wlog.SetLogLevel(wlog.Nfo)
+    wlog.SetFormatter(wlog.JSONFormatter{})
+
+    context := wlog.WithContext(wlog.Fields{"userId": "dd18f2b6-35df-11ea-bb24-c0b88337ca26"})
+    context.Info("This is a log entry")
+    context.Info("This is another log entry")
+
+}
+```
+Here *wlog* is set the log level to `INFO` and the formatter to `wlog.JSONFormatter`. After that we invoke the method `WithContext` passing `Fields`. The
+type `wlog.Fields` is a alias type to `map[string]interface{}`. Running this code you should see the output below:
+
+```text
+2020-01-13 09:50:40:990531 NFO {"msg":"This is a log entry","userId":"dd18f2b6-35df-11ea-bb24-c0b88337ca26"}
+2020-01-13 09:50:40:990621 NFO {"msg":"This is another log entry","userId":"dd18f2b6-35df-11ea-bb24-c0b88337ca26"}
+``` 
+Note that we call the method `Info` two times with different messages, however, the field `userId` added to the log context sticks with the context and it is part of the log entry at all times. This behaviour was inspired by the great library [logrus](https://github.com/sirupsen/logrus)
+
+One important thing to note is that the `LoggerContext` also has a `WithContext` method that can be called to create a new context, when doing so a new context will be created and the fields added in the previous context will be "copied" over to the new one. 
+
 ## Test
 ```
 go test
