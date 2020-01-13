@@ -33,6 +33,11 @@ func (ctx *LoggerContext) WithContext(f Fields) *LoggerContext {
 }
 
 func (ctx *LoggerContext) write(logLevel LogLevel, msg string) {
+
+	if logLevel < ctx.logger.logLevel {
+		return
+	}
+
 	switch ctx.logger.formatter.(type) {
 	case JSONFormatter:
 		updatedContext := ctx.WithContext(Fields{"msg": msg})
