@@ -118,7 +118,7 @@ func (l *Logger) Configure(cfg *Config) {
 	}
 }
 
-// WithContext returns a new instance of LoggerContext
+// WithFields returns a new instance of LoggerContext
 func (l *Logger) WithFields(f Fields) *LoggerContext {
 	return &LoggerContext{logger: l, fields: f, formatter:JSONFormatter{}}
 }
@@ -386,6 +386,7 @@ func DefaultLogger() *Logger {
 	return logger
 }
 
+// WithFields returns a new instance of LoggerContext
 func WithFields(fields Fields) *LoggerContext {
 	return logger.WithFields(fields)
 }
