@@ -3,8 +3,10 @@ package wlog
 import (
 	"fmt"
 	"os"
+	"time"
 )
 
+// Fields are the fields that will be included in a JSON log output
 type Fields map[string]interface{}
 
 // LoggerContext represents the logger current context. This is not meant to be used
@@ -15,97 +17,143 @@ type Fields map[string]interface{}
 type LoggerContext struct {
 	logger *Logger
 	fields Fields
+	formatter Formatter
 }
 
 // WithContext get a list of Fields and create a new LoggerContext instance.
-func (ctx *LoggerContext) WithContext(f Fields) *LoggerContext {
-	newContextFields := make(Fields, len(ctx.fields)+len(f))
+func (c *LoggerContext) WithFields(f Fields) *LoggerContext {
+	newContextFields := make(Fields, len(c.fields)+len(f))
 
 	// first the fields on the previous context are added
-	for k, v := range ctx.fields {
+	for k, v := range c.fields {
 		newContextFields[k] = v
 	}
 	// add the new fields
 	for k, v := range f {
 		newContextFields[k] = v
 	}
-	return &LoggerContext{logger: ctx.logger, fields: newContextFields}
+	return &LoggerContext{logger: c.logger, fields: newContextFields}
 }
 
-func (ctx *LoggerContext) write(logLevel LogLevel, msg string) {
+func getTimestamp(now time.Time) string {
+	year, month, day := now.Date()
+	hour, min, sec := now.Clock()
+	nano := now.Nanosecond()/1e3
 
-	if logLevel < ctx.logger.logLevel {
+	format := "%d-%02d-%02d %02d:%02d:%02d:%06d"
+
+	return fmt.Sprintf(format, year, month, day, hour, min, sec, nano)
+}
+
+func (c *LoggerContext) write(logLevel LogLevel, msg string) {
+	if logLevel < c.logger.logLevel {
 		return
 	}
 
-	switch ctx.logger.formatter.(type) {
+	now := time.Now()
+
+	switch c.formatter.(type) {
 	case JSONFormatter:
-		updatedContext := ctx.WithContext(Fields{"msg": msg})
-		formattedFields, err := ctx.logger.formatter.Format(updatedContext)
+		c.fields["msg"] = msg
+		c.fields["level"] = logLevel.String()
+		c.fields["timestamp"] = getTimestamp(now)
+
+		c.logger.lock.Lock()
+		defer c.logger.lock.Unlock()
+
+		c.logger.buffer = c.logger.buffer[:0]
+
+		formattedFields, err := c.formatter.Format(c)
+
 		if err != nil {
 			fmt.Fprintf(os.Stderr, "Failed to format context fields, %v\n", err)
 			return
 		}
-		ctx.logger.Write(logLevel, formattedFields)
+
+		c.logger.buffer = append(c.logger.buffer, formattedFields...,)
+
 	default:
-		ctx.logger.Write(logLevel, msg)
-	}
-}
-
-// Emits an INFO log entry
-func (ctx *LoggerContext) Info(v ...interface{}) {
-	ctx.write(Nfo, fmt.Sprint(v...))
-}
-
-// Emits an INFO log entry
-func (ctx *LoggerContext) Infof(format string, v ...interface{}) {
-	ctx.write(Nfo, fmt.Sprintf(format, v...))
-}
-
-// Emits a DEBUG log entry
-func (ctx *LoggerContext) Debug(v ...interface{}) {
-	if Dbg < ctx.logger.logLevel {
+		c.logger.write(logLevel, msg)
 		return
 	}
-	ctx.write(Dbg, fmt.Sprint(v...))
+
+	// Write to file if provided
+	if c.logger.writer != nil {
+		c.logger.writer.Write(c.logger.buffer)
+	}
+
+	// Write to standard output if requested
+	if c.logger.stdOut {
+		if logLevel > Wrn {
+			os.Stderr.Write(c.logger.buffer)
+		} else {
+			os.Stdout.Write(c.logger.buffer)
+		}
+	}
+
+	// Call any installed hooks
+	if c.logger.hooks != nil {
+		for _, h := range c.logger.hooks[logLevel] {
+			h(now, logLevel, msg)
+		}
+	}
+
 }
 
-// Emits a DEBUG log entry
-func (ctx *LoggerContext) Debugf(format string, v ...interface{}) {
-	if Dbg < ctx.logger.logLevel {
+// Info emits an INFO log entry
+func (c *LoggerContext) Info(v ...interface{}) {
+	c.write(Nfo, fmt.Sprint(v...))
+}
+
+// Infof emits an INFO log entry
+func (c *LoggerContext) Infof(format string, v ...interface{}) {
+	c.write(Nfo, fmt.Sprintf(format, v...))
+}
+
+// Debug emits a DEBUG log entry
+func (c *LoggerContext) Debug(v ...interface{}) {
+	if Dbg < c.logger.logLevel {
 		return
 	}
-	ctx.write(Dbg, fmt.Sprintf(format, v...))
+	c.write(Dbg, fmt.Sprint(v...))
 }
 
-// Emits an ERROR log entry
-func (ctx *LoggerContext) Error(v ...interface{}) {
-	ctx.write(Err, fmt.Sprint(v...))
+// Debugf emits a DEBUG log entry
+func (c *LoggerContext) Debugf(format string, v ...interface{}) {
+	if Dbg < c.logger.logLevel {
+		return
+	}
+	c.write(Dbg, fmt.Sprintf(format, v...))
 }
 
-// Emits an ERROR log entry
-func (ctx *LoggerContext) Errorf(format string, v ...interface{}) {
-	ctx.write(Err, fmt.Sprintf(format, v...))
+// Error emits an ERROR log entry
+func (c *LoggerContext) Error(v ...interface{}) {
+	c.write(Err, fmt.Sprint(v...))
 }
 
-// Emits a WARNING log entry
-func (ctx *LoggerContext) Warning(v ...interface{}) {
-	ctx.write(Wrn, fmt.Sprint(v...))
+// Errorf emits an ERROR log entry
+func (c *LoggerContext) Errorf(format string, v ...interface{}) {
+	c.write(Err, fmt.Sprintf(format, v...))
 }
 
-// Emits a WARNING log entry
-func (ctx *LoggerContext) Warningf(format string, v ...interface{}) {
-	ctx.write(Wrn, fmt.Sprintf(format, v...))
+// Warning emits a WARNING log entry
+func (c *LoggerContext) Warning(v ...interface{}) {
+	c.write(Wrn, fmt.Sprint(v...))
 }
 
-// Emits a FATAL log entry
-func (ctx *LoggerContext) Fatal(v ...interface{}) {
-	ctx.write(Ftl, fmt.Sprint(v...))
+// Warningf emits a WARNING log entry
+func (c *LoggerContext) Warningf(format string, v ...interface{}) {
+	c.write(Wrn, fmt.Sprintf(format, v...))
+}
+
+// Fatal emits a FATAL log entry
+func (c *LoggerContext) Fatal(v ...interface{}) {
+	c.write(Ftl, fmt.Sprint(v...))
 	os.Exit(1)
 }
 
-// Emits a FATAL log entry
-func (ctx *LoggerContext) Fatalf(format string, v ...interface{}) {
-	ctx.write(Ftl, fmt.Sprintf(format, v...))
+// Fatalf emits a FATAL log entry
+func (c *LoggerContext) Fatalf(format string, v ...interface{}) {
+	c.write(Ftl, fmt.Sprintf(format, v...))
 	os.Exit(1)
 }

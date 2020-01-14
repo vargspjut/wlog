@@ -89,7 +89,6 @@ type Logger struct {
 	lock     sync.Mutex
 	buffer   []byte
 	hooks    map[LogLevel][]HookFunc
-	formatter Formatter
 }
 
 // Configure configures the logger
@@ -120,9 +119,8 @@ func (l *Logger) Configure(cfg *Config) {
 }
 
 // WithContext returns a new instance of LoggerContext
-func (l *Logger) WithContext(f Fields) *LoggerContext {
-	newContext := &LoggerContext{logger: l, fields: make(Fields, 6)}
-	return newContext.WithContext(f)
+func (l *Logger) WithFields(f Fields) *LoggerContext {
+	return &LoggerContext{logger: l, fields: f, formatter:JSONFormatter{}}
 }
 
 // Debugf formats and logs a debug message
@@ -134,7 +132,7 @@ func (l *Logger) Debugf(format string, v ...interface{}) {
 		return
 	}
 
-	l.Write(Dbg, fmt.Sprintf(format, v...))
+	l.write(Dbg, fmt.Sprintf(format, v...))
 }
 
 // Debug logs a debug message
@@ -146,48 +144,48 @@ func (l *Logger) Debug(v ...interface{}) {
 		return
 	}
 
-	l.Write(Dbg, fmt.Sprint(v...))
+	l.write(Dbg, fmt.Sprint(v...))
 }
 
 // Infof formats and logs an informal message
 func (l *Logger) Infof(format string, v ...interface{}) {
-	l.Write(Nfo, fmt.Sprintf(format, v...))
+	l.write(Nfo, fmt.Sprintf(format, v...))
 }
 
 // Info logs an informal message
 func (l *Logger) Info(v ...interface{}) {
-	l.Write(Nfo, fmt.Sprint(v...))
+	l.write(Nfo, fmt.Sprint(v...))
 }
 
 // Warningf formats and logs a warning message
 func (l *Logger) Warningf(format string, v ...interface{}) {
-	l.Write(Wrn, fmt.Sprintf(format, v...))
+	l.write(Wrn, fmt.Sprintf(format, v...))
 }
 
 // Warning logs a warning message
 func (l *Logger) Warning(v ...interface{}) {
-	l.Write(Wrn, fmt.Sprint(v...))
+	l.write(Wrn, fmt.Sprint(v...))
 }
 
 // Errorf formats and logs an error message
 func (l *Logger) Errorf(format string, v ...interface{}) {
-	l.Write(Err, fmt.Sprintf(format, v...))
+	l.write(Err, fmt.Sprintf(format, v...))
 }
 
 // Error logs an error message
 func (l *Logger) Error(v ...interface{}) {
-	l.Write(Err, fmt.Sprint(v...))
+	l.write(Err, fmt.Sprint(v...))
 }
 
 // Fatalf formats and logs an unrecoverable error message
 func (l *Logger) Fatalf(format string, v ...interface{}) {
-	l.Write(Ftl, fmt.Sprintf(format, v...))
+	l.write(Ftl, fmt.Sprintf(format, v...))
 	os.Exit(1)
 }
 
 // Fatal logs an unrecoverable error message
 func (l *Logger) Fatal(v ...interface{}) {
-	l.Write(Ftl, fmt.Sprint(v...))
+	l.write(Ftl, fmt.Sprint(v...))
 	os.Exit(1)
 }
 
@@ -204,8 +202,8 @@ func (l *Logger) InstallHook(logLevel LogLevel, hook HookFunc) {
 	l.hooks[logLevel] = append(l.hooks[logLevel], hook)
 }
 
-// Write writes a log entry to file and possibly to standard output
-func (l *Logger) Write(logLevel LogLevel, msg string) {
+// write writes a log entry to file and possibly to standard output
+func (l *Logger) write(logLevel LogLevel, msg string) {
 
 	if logLevel < l.logLevel {
 		return
@@ -284,13 +282,6 @@ func (l *Logger) Write(logLevel LogLevel, msg string) {
 			h(now, logLevel, msg)
 		}
 	}
-}
-
-// SetFormatter sets the logger's default formatter
-func (l *Logger) SetFormatter(formatter Formatter) {
-	l.lock.Lock()
-	defer l.lock.Unlock()
-	l.formatter = formatter
 }
 
 // SetWriter sets or clears the writer of the logger
@@ -395,12 +386,8 @@ func DefaultLogger() *Logger {
 	return logger
 }
 
-func WithContext(fields Fields) *LoggerContext {
-	return logger.WithContext(fields)
-}
-
-func SetFormatter(formatter Formatter) {
-	logger.formatter = formatter
+func WithFields(fields Fields) *LoggerContext {
+	return logger.WithFields(fields)
 }
 
 // Cheap integer to fixed-width decimal ASCII. Give a negative width to avoid zero-padding.
