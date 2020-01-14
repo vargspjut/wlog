@@ -32,7 +32,7 @@ func (c *LoggerContext) WithFields(f Fields) *LoggerContext {
 	for k, v := range f {
 		newContextFields[k] = v
 	}
-	return &LoggerContext{logger: c.logger, fields: newContextFields}
+	return &LoggerContext{logger: c.logger, fields: newContextFields, formatter: c.formatter}
 }
 
 func getTimestamp(now time.Time) string {

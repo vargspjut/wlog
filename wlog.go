@@ -120,7 +120,12 @@ func (l *Logger) Configure(cfg *Config) {
 
 // WithFields returns a new instance of LoggerContext
 func (l *Logger) WithFields(f Fields) *LoggerContext {
-	return &LoggerContext{logger: l, fields: f, formatter:JSONFormatter{}}
+	fields := f
+	if fields == nil {
+		fields = Fields{}
+	}
+
+	return &LoggerContext{logger: l, fields: fields, formatter:JSONFormatter{}}
 }
 
 // Debugf formats and logs a debug message
