@@ -125,7 +125,7 @@ func (l *Logger) WithFields(f Fields) *LoggerContext {
 		fields = Fields{}
 	}
 
-	return &LoggerContext{logger: l, fields: fields, formatter:JSONFormatter{}}
+	return &LoggerContext{logger: l, fields: fields, formatter: JSONFormatter{}}
 }
 
 // Debugf formats and logs a debug message

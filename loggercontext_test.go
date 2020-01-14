@@ -35,7 +35,7 @@ func Test_WithFields_DefaultProps(t *testing.T) {
 
 	totalFields := len(logger.fields)
 
-	if  totalFields != expected {
+	if totalFields != expected {
 		t.Fatalf("Expected %d, got %d", expected, totalFields)
 	}
 

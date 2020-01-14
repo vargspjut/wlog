@@ -15,8 +15,8 @@ type Fields map[string]interface{}
 //
 // wlog.WithContext(Fields{"firstname": "John", "lastname": "Smith"})
 type LoggerContext struct {
-	logger *Logger
-	fields Fields
+	logger    *Logger
+	fields    Fields
 	formatter Formatter
 }
 
@@ -38,7 +38,7 @@ func (c *LoggerContext) WithFields(f Fields) *LoggerContext {
 func getTimestamp(now time.Time) string {
 	year, month, day := now.Date()
 	hour, min, sec := now.Clock()
-	nano := now.Nanosecond()/1e3
+	nano := now.Nanosecond() / 1e3
 
 	format := "%d-%02d-%02d %02d:%02d:%02d:%06d"
 
@@ -70,7 +70,7 @@ func (c *LoggerContext) write(logLevel LogLevel, msg string) {
 			return
 		}
 
-		c.logger.buffer = append(c.logger.buffer, formattedFields...,)
+		c.logger.buffer = append(c.logger.buffer, formattedFields...)
 
 	default:
 		c.logger.write(logLevel, msg)
