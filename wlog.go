@@ -233,7 +233,7 @@ func (l *Logger) write(logLevel LogLevel, msg string) {
 	entryBuffer.Reset()
 
 	if err := l.formatter.Format(entryBuffer, l, msg, now); err != nil {
-		panic(err) // change it later
+		fmt.Fprintf(os.Stderr, "error formatting the log entry: %v", err)
 	}
 
 	logEntry := entryBuffer.Bytes()
@@ -242,7 +242,6 @@ func (l *Logger) write(logLevel LogLevel, msg string) {
 	if l.writer != nil {
 		if _, err := l.writer.Write(logEntry); err != nil {
 			fmt.Fprintf(os.Stderr, "could not write log entry to the file, err: %v", err)
-			os.Exit(1)
 		}
 	}
 
@@ -254,7 +253,6 @@ func (l *Logger) write(logLevel LogLevel, msg string) {
 		}
 		if _, err := entryBuffer.WriteTo(output); err != nil {
 			fmt.Fprintf(os.Stderr, "could not write log entry to: %v", output)
-			os.Exit(1)
 		}
 	}
 
