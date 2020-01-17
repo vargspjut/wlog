@@ -15,16 +15,6 @@ type Formatter interface {
 	Format(w io.Writer, l *Logger, msg string, entryTime time.Time) error
 }
 
-func getTimestamp(now time.Time) string {
-	year, month, day := now.Date()
-	hour, min, sec := now.Clock()
-	nano := now.Nanosecond() / 1e3
-
-	format := "%d-%02d-%02d %02d:%02d:%02d:%06d"
-
-	return fmt.Sprintf(format, year, month, day, hour, min, sec, nano)
-}
-
 // JSONFormatter used to output logs in JSON format
 type JSONFormatter struct{}
 
@@ -96,6 +86,16 @@ func (t TextFormatter) Format(w io.Writer, l *Logger, msg string, entryTime time
 	}
 
 	return nil
+}
+
+func getTimestamp(now time.Time) string {
+	year, month, day := now.Date()
+	hour, min, sec := now.Clock()
+	nano := now.Nanosecond() / 1e3
+
+	format := "%d-%02d-%02d %02d:%02d:%02d:%06d"
+
+	return fmt.Sprintf(format, year, month, day, hour, min, sec, nano)
 }
 
 func writeString(w io.Writer, str string) {

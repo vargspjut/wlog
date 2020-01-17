@@ -93,7 +93,6 @@ type Logger struct {
 	logLevel  LogLevel
 	stdOut    bool
 	lock      sync.Mutex
-	buffer    []byte
 	hooks     map[LogLevel][]HookFunc
 	fields    Fields
 	formatter Formatter
