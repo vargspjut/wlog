@@ -18,7 +18,7 @@ type Formatter interface {
 // JSONFormatter used to output logs in JSON format
 type JSONFormatter struct{}
 
-// Implements Formatter.Format
+// Format implements JSON formatting
 func (j JSONFormatter) Format(w io.Writer, l *Logger, msg string, entryTime time.Time) error {
 	l.fields["msg"] = msg
 	l.fields["timestamp"] = getTimestamp(entryTime)
@@ -37,6 +37,7 @@ func (j JSONFormatter) Format(w io.Writer, l *Logger, msg string, entryTime time
 // formatter when creating a instance of wlog.
 type TextFormatter struct{}
 
+// Format implements plain text formatting
 func (t TextFormatter) Format(w io.Writer, l *Logger, msg string, entryTime time.Time) error {
 
 	// Write Date

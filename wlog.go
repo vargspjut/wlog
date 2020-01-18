@@ -106,7 +106,10 @@ var bufferPool = sync.Pool{New: func() interface{} {
 func (l *Logger) Configure(cfg *Config) {
 	l.SetLogLevel(cfg.LogLevel)
 	l.SetStdOut(cfg.StdOut)
-	l.SetFormatter(cfg.Formatter)
+
+	if cfg.Formatter != nil {
+		l.SetFormatter(cfg.Formatter)
+	}
 
 	if cfg.Path != "" {
 
