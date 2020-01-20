@@ -12,21 +12,23 @@ import (
 // one method called Format which will be called when outputting
 // the write entry
 type Formatter interface {
-	Format(w io.Writer, l *Logger, msg string, entryTime time.Time) error
+	Format(w io.Writer, l WLogger, msg string, entryTime time.Time) error
 }
 
 // JSONFormatter used to output logs in JSON format
 type JSONFormatter struct{}
 
-// Format implements JSON formatting
-func (j JSONFormatter) Format(w io.Writer, l *Logger, msg string, entryTime time.Time) error {
-	l.fields["msg"] = msg
-	l.fields["timestamp"] = getTimestamp(entryTime)
-	l.fields["level"] = l.logLevel.String()
+// Implements Formatter.Format
+func (j JSONFormatter) Format(w io.Writer, wl WLogger, msg string, entryTime time.Time) error {
+	fields := wl.GetFields()
+
+	fields["msg"] = msg
+	fields["timestamp"] = getTimestamp(entryTime)
+	fields["level"] = wl.GetLogLevel().String()
 
 	encoder := json.NewEncoder(w)
 
-	if err := encoder.Encode(l.fields); err != nil {
+	if err := encoder.Encode(fields); err != nil {
 		return fmt.Errorf("failed to marshal fields to JSON, %v", err)
 	}
 
@@ -37,8 +39,8 @@ func (j JSONFormatter) Format(w io.Writer, l *Logger, msg string, entryTime time
 // formatter when creating a instance of wlog.
 type TextFormatter struct{}
 
-// Format implements plain text formatting
-func (t TextFormatter) Format(w io.Writer, l *Logger, msg string, entryTime time.Time) error {
+// Implements Formatter.Format
+func (t TextFormatter) Format(w io.Writer, wl WLogger, msg string, entryTime time.Time) error {
 
 	// Write Date
 	year, month, day := entryTime.Date()
@@ -64,7 +66,7 @@ func (t TextFormatter) Format(w io.Writer, l *Logger, msg string, entryTime time
 
 	// Write log level
 	var level string
-	switch l.logLevel {
+	switch wl.GetLogLevel() {
 	case Dbg:
 		level = "DBG "
 	case Nfo:
