@@ -12,8 +12,8 @@ import (
 // to have a separate scope where it is possible to add fields without interfering with the
 // global instance of Logger. ScopedLogger instances are created  by calling wlog.WithScope
 type ScopedLogger struct {
-	fields Fields
-	logger *Logger
+	fields    Fields
+	logger    *Logger
 	formatter Formatter
 }
 
