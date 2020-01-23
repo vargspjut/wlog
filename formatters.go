@@ -12,18 +12,18 @@ import (
 // one method called Format which will be called when outputting
 // the write entry
 type Formatter interface {
-	Format(w io.Writer, logLevel LogLevel, l WLogger, msg string, entryTime time.Time) error
+	Format(w io.Writer, logLevel LogLevel, l WLogger, msg string, timestamp time.Time) error
 }
 
 // JSONFormatter used to output logs in JSON format
 type JSONFormatter struct{}
 
 // Implements Formatter.Format
-func (j JSONFormatter) Format(w io.Writer, logLevel LogLevel, wl WLogger, msg string, entryTime time.Time) error {
+func (j JSONFormatter) Format(w io.Writer, logLevel LogLevel, wl WLogger, msg string, timestamp time.Time) error {
 	fields := wl.GetFields()
 
 	fields["msg"] = msg
-	fields["timestamp"] = getTimestamp(entryTime)
+	fields["timestamp"] = getTimestamp(timestamp)
 	fields["level"] = logLevel.String()
 
 	encoder := json.NewEncoder(w)
@@ -40,10 +40,10 @@ func (j JSONFormatter) Format(w io.Writer, logLevel LogLevel, wl WLogger, msg st
 type TextFormatter struct{}
 
 // Implements Formatter.Format
-func (t TextFormatter) Format(w io.Writer, logLevel LogLevel, wl WLogger, msg string, entryTime time.Time) error {
+func (t TextFormatter) Format(w io.Writer, logLevel LogLevel, wl WLogger, msg string, timestamp time.Time) error {
 
 	// Write Date
-	year, month, day := entryTime.Date()
+	year, month, day := timestamp.Date()
 	itoa(w, year, 4)
 	writeString(w, "-")
 	itoa(w, int(month), 2)
@@ -53,14 +53,14 @@ func (t TextFormatter) Format(w io.Writer, logLevel LogLevel, wl WLogger, msg st
 	writeString(w, " ")
 
 	// Write time
-	hour, min, sec := entryTime.Clock()
+	hour, min, sec := timestamp.Clock()
 	itoa(w, hour, 2)
 	writeString(w, ":")
 	itoa(w, min, 2)
 	writeString(w, ":")
 	itoa(w, sec, 2)
 	writeString(w, ":")
-	itoa(w, entryTime.Nanosecond()/1e3, 6)
+	itoa(w, timestamp.Nanosecond()/1e3, 6)
 
 	writeString(w, " ")
 

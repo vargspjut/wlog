@@ -86,16 +86,16 @@ func (s *ScopedLogger) Fatal(v ...interface{}) {
 }
 
 func (s *ScopedLogger) writef(logLevel LogLevel, msg string) {
-	entryTime := time.Now()
+	timestamp := time.Now()
 
 	entryBuffer := bufferPool.Get().(*bytes.Buffer)
 	defer bufferPool.Put(entryBuffer)
 
 	entryBuffer.Reset()
 
-	if err := s.formatter.Format(entryBuffer, logLevel, s, msg, entryTime); err != nil {
+	if err := s.formatter.Format(entryBuffer, logLevel, s, msg, timestamp); err != nil {
 		fmt.Fprintf(os.Stderr, "error formatting the log entry: %v", err)
 	}
 
-	write(s.logger, entryBuffer, logLevel, msg, entryTime)
+	write(s.logger, entryBuffer, logLevel, msg, timestamp)
 }

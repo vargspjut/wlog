@@ -258,7 +258,7 @@ func (l *Logger) writef(logLevel LogLevel, msg string) {
 }
 
 // write writes a log entry to file and possibly to standard output
-func write(l *Logger, buffer *bytes.Buffer, logLevel LogLevel, msg string, entryTime time.Time) {
+func write(l *Logger, buffer *bytes.Buffer, logLevel LogLevel, msg string, timestamp time.Time) {
 
 	logEntry := buffer.Bytes()
 
@@ -283,7 +283,7 @@ func write(l *Logger, buffer *bytes.Buffer, logLevel LogLevel, msg string, entry
 	// Call any installed hooks
 	if l.hooks != nil {
 		for _, h := range l.hooks[logLevel] {
-			h(entryTime, logLevel, msg)
+			h(timestamp, logLevel, msg)
 		}
 	}
 }
