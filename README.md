@@ -69,7 +69,7 @@ wlog.Warning("This is a Warning log entry. No hooks installed")
 ```
 
 ### Structured logs
-*wlog* provides support for structured logs allowing the addition of fields that will "stick" with the log. When using the`wlog.WithFields` method the log entries will automatically be serialized to JSON and the string passed to logging methods like `wlog.info` will be included in the JSON object as well. See the code snippet below:
+*wlog* provides support for structured logs allowing the addition of fields to a `Logger` global scope and also create scoped logger. See the code snippet below:
 
 ```golang
 package main
