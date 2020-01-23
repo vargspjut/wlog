@@ -134,14 +134,6 @@ func (l *Logger) Configure(cfg *Config) {
 	}
 }
 
-// WithFields method attach fields to the logger global scope
-func (l *Logger) WithFields(fields Fields) {
-	l.lock.Lock()
-	defer l.lock.Unlock()
-	l.formatter = JSONFormatter{}
-	l.fields = fields
-}
-
 // WithScope returns a new instance of ScopedLogger and its fields property
 // will contain the fields added to the global instance of Logger
 func (l *Logger) WithScope(fields Fields) *ScopedLogger {
@@ -416,9 +408,4 @@ func SetGlobalFields(fields Fields) {
 // will contain the fields added to the global instance of Logger
 func WithScope(fields Fields) *ScopedLogger {
 	return logger.WithScope(fields)
-}
-
-// WithFields method attach fields to the logger global scope
-func WithFields(fields Fields) {
-	logger.WithFields(fields)
 }
