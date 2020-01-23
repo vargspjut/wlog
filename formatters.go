@@ -12,19 +12,19 @@ import (
 // one method called Format which will be called when outputting
 // the write entry
 type Formatter interface {
-	Format(w io.Writer, l WLogger, msg string, entryTime time.Time) error
+	Format(w io.Writer, logLevel LogLevel, l WLogger, msg string, entryTime time.Time) error
 }
 
 // JSONFormatter used to output logs in JSON format
 type JSONFormatter struct{}
 
 // Implements Formatter.Format
-func (j JSONFormatter) Format(w io.Writer, wl WLogger, msg string, entryTime time.Time) error {
+func (j JSONFormatter) Format(w io.Writer, logLevel LogLevel, wl WLogger, msg string, entryTime time.Time) error {
 	fields := wl.GetFields()
 
 	fields["msg"] = msg
 	fields["timestamp"] = getTimestamp(entryTime)
-	fields["level"] = wl.GetLogLevel().String()
+	fields["level"] = logLevel.String()
 
 	encoder := json.NewEncoder(w)
 
@@ -40,7 +40,7 @@ func (j JSONFormatter) Format(w io.Writer, wl WLogger, msg string, entryTime tim
 type TextFormatter struct{}
 
 // Implements Formatter.Format
-func (t TextFormatter) Format(w io.Writer, wl WLogger, msg string, entryTime time.Time) error {
+func (t TextFormatter) Format(w io.Writer, logLevel LogLevel, wl WLogger, msg string, entryTime time.Time) error {
 
 	// Write Date
 	year, month, day := entryTime.Date()
@@ -66,7 +66,7 @@ func (t TextFormatter) Format(w io.Writer, wl WLogger, msg string, entryTime tim
 
 	// Write log level
 	var level string
-	switch wl.GetLogLevel() {
+	switch logLevel {
 	case Dbg:
 		level = "DBG "
 	case Nfo:

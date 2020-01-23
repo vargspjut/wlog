@@ -134,6 +134,14 @@ func (l *Logger) Configure(cfg *Config) {
 	}
 }
 
+// WithFields method attach fields to the logger global scope
+func (l *Logger) WithFields(fields Fields) {
+	l.lock.Lock()
+	defer l.lock.Unlock()
+	l.formatter = JSONFormatter{}
+	l.fields = fields
+}
+
 // WithScope returns a new instance of ScopedLogger and its fields property
 // will contain the fields added to the global instance of Logger
 func (l *Logger) WithScope(fields Fields) *ScopedLogger {
@@ -142,7 +150,7 @@ func (l *Logger) WithScope(fields Fields) *ScopedLogger {
 	for k, v := range l.fields {
 		scopeFields[k] = v
 	}
-	return &ScopedLogger{scopeFields, l}
+	return &ScopedLogger{scopeFields, l, JSONFormatter{}}
 }
 
 // SetGlobalFields set fields in a global wlog instance. These fields will be appended to any
@@ -242,7 +250,7 @@ func (l *Logger) writef(logLevel LogLevel, msg string) {
 	defer bufferPool.Put(entryBuffer)
 	entryBuffer.Reset()
 
-	if err := l.formatter.Format(entryBuffer, l, msg, now); err != nil {
+	if err := l.formatter.Format(entryBuffer, logLevel, l, msg, now); err != nil {
 		fmt.Fprintf(os.Stderr, "error formatting the log entry: %v", err)
 	}
 
@@ -408,4 +416,9 @@ func SetGlobalFields(fields Fields) {
 // will contain the fields added to the global instance of Logger
 func WithScope(fields Fields) *ScopedLogger {
 	return logger.WithScope(fields)
+}
+
+// WithFields method attach fields to the logger global scope
+func WithFields(fields Fields) {
+	logger.WithFields(fields)
 }

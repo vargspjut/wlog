@@ -14,6 +14,7 @@ import (
 type ScopedLogger struct {
 	fields Fields
 	logger *Logger
+	formatter Formatter
 }
 
 // GetFields implements WLogger.GetFields
@@ -92,7 +93,7 @@ func (s *ScopedLogger) writef(logLevel LogLevel, msg string) {
 
 	entryBuffer.Reset()
 
-	if err := s.logger.formatter.Format(entryBuffer, s, msg, entryTime); err != nil {
+	if err := s.formatter.Format(entryBuffer, logLevel, s, msg, entryTime); err != nil {
 		fmt.Fprintf(os.Stderr, "error formatting the log entry: %v", err)
 	}
 
