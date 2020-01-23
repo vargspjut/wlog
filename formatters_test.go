@@ -14,11 +14,11 @@ func Test_JSONFormatter(t *testing.T) {
 	expected := fmt.Sprintf(`{"field1":"test value","level":"Info","msg":"test value","timestamp":"%s"}`, getTimestamp(now))
 
 	SetLogLevel(Nfo)
-	WithFields(Fields{"field1": "test value"})
+	SetGlobalFields(Fields{"field1": "test value"})
 
 	buf := &bytes.Buffer{}
 
-	if err := logger.formatter.Format(buf, logger, "test value", now); err != nil {
+	if err := logger.formatter.Format(buf, Nfo, logger, "test value", now); err != nil {
 		t.Fatalf("failed to format the log entry, err: %s", err)
 	}
 

@@ -69,7 +69,7 @@ wlog.Warning("This is a Warning log entry. No hooks installed")
 ```
 
 ### Structured logs
-*wlog* provides support for structured logs allowing the addition of fields that will "stick" with the log. When using the`wlog.WithFields` method the log entries will automatically be serialized to JSON and the string passed to logging methods like `wlog.info` will be included in the JSON object as well. See the code snippet below:
+*wlog* provides support for structured logs allowing the addition of fields to a `Logger` global scope and also create scoped logger. See the code snippet below:
 
 ```golang
 package main
@@ -79,20 +79,26 @@ import "github.com/vargspjut/wlog"
 func main() {
 
     wlog.SetLogLevel(wlog.Nfo)
-    wlog.WithFields(wlog.Fields{"userId": "dd18f2b6-35df-11ea-bb24-c0b88337ca26"})
+    wlog.SetGlobalFields(wlog.Fields{"userId": "dd18f2b6-35df-11ea-bb24-c0b88337ca26"})
+
+    logger := wlog.WithScope(wlog.Fields{"field1": "field1_value"})
 
     logger.Info("This is a log entry")
     logger.Info("This is another log entry")
 
 }
 ```
-Here *wlog* is set the log level to `INFO` and after that we invoke the method `WithFields` passing `wlog.Fields` which is a alias type to `map[string]interface{}`. Running this code you should see the output below:
+Here, *wlog* is set the log level `INFO` and after that we invoke the method `SetGlobalFields` passing `wlog.Fields` which is a alias type to `map[string]interface{}`.
+`SetGlobalFields` will attach `Fields` to the `Logger` global scope. Next, the `WithScope` method is called receiving `Fields` as arguments, this will return a new scope with `Fields` attached to it, this new scope will contain its own list of `Fields`, plus 
+the fields previously added to the global scope. Child scopes use the `JSONFormatter` by default.
+ 
+Running this code you should see the output below:
 
 ```json
-{"level":"Info","msg":"This is a log entry","timestamp":"2020-01-14 10:49:03:627880","userId":"dd18f2b6-35df-11ea-bb24-c0b88337ca26"}
-{"level":"Info","msg":"This is another log entry","timestamp":"2020-01-14 10:49:03:627981","userId":"dd18f2b6-35df-11ea-bb24-c0b88337ca26"}
+{"field1":"field1_value","level":"Info","msg":"This is a log entry","timestamp":"2020-01-23 09:57:54:157141","userId":"dd18f2b6-35df-11ea-bb24-c0b88337ca26"}
+{"field1":"field1_value","level":"Info","msg":"This is another log entry","timestamp":"2020-01-23 09:57:54:157273","userId":"dd18f2b6-35df-11ea-bb24-c0b88337ca26"}
 ``` 
-Note that we call the method `Info` two times with different messages, however, the field `userId` added to the log sticks with the logger and it is part of the log entry at all times. This behaviour was inspired by the great library [logrus](https://github.com/sirupsen/logrus)
+Note that we call the method `Info` two times with different messages, however, the field `userId` added to the global scope sticks with the logger and it is part of the log entry at all times. This behaviour was inspired by the great library [logrus](https://github.com/sirupsen/logrus)
 ## Test
 ```
 go test

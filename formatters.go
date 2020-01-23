@@ -12,21 +12,23 @@ import (
 // one method called Format which will be called when outputting
 // the write entry
 type Formatter interface {
-	Format(w io.Writer, l *Logger, msg string, entryTime time.Time) error
+	Format(w io.Writer, logLevel LogLevel, l WLogger, msg string, timestamp time.Time) error
 }
 
 // JSONFormatter used to output logs in JSON format
 type JSONFormatter struct{}
 
-// Format implements JSON formatting
-func (j JSONFormatter) Format(w io.Writer, l *Logger, msg string, entryTime time.Time) error {
-	l.fields["msg"] = msg
-	l.fields["timestamp"] = getTimestamp(entryTime)
-	l.fields["level"] = l.logLevel.String()
+// Implements Formatter.Format
+func (j JSONFormatter) Format(w io.Writer, logLevel LogLevel, wl WLogger, msg string, timestamp time.Time) error {
+	fields := wl.GetFields()
+
+	fields["msg"] = msg
+	fields["timestamp"] = getTimestamp(timestamp)
+	fields["level"] = logLevel.String()
 
 	encoder := json.NewEncoder(w)
 
-	if err := encoder.Encode(l.fields); err != nil {
+	if err := encoder.Encode(fields); err != nil {
 		return fmt.Errorf("failed to marshal fields to JSON, %v", err)
 	}
 
@@ -37,11 +39,11 @@ func (j JSONFormatter) Format(w io.Writer, l *Logger, msg string, entryTime time
 // formatter when creating a instance of wlog.
 type TextFormatter struct{}
 
-// Format implements plain text formatting
-func (t TextFormatter) Format(w io.Writer, l *Logger, msg string, entryTime time.Time) error {
+// Implements Formatter.Format
+func (t TextFormatter) Format(w io.Writer, logLevel LogLevel, wl WLogger, msg string, timestamp time.Time) error {
 
 	// Write Date
-	year, month, day := entryTime.Date()
+	year, month, day := timestamp.Date()
 	itoa(w, year, 4)
 	writeString(w, "-")
 	itoa(w, int(month), 2)
@@ -51,20 +53,20 @@ func (t TextFormatter) Format(w io.Writer, l *Logger, msg string, entryTime time
 	writeString(w, " ")
 
 	// Write time
-	hour, min, sec := entryTime.Clock()
+	hour, min, sec := timestamp.Clock()
 	itoa(w, hour, 2)
 	writeString(w, ":")
 	itoa(w, min, 2)
 	writeString(w, ":")
 	itoa(w, sec, 2)
 	writeString(w, ":")
-	itoa(w, entryTime.Nanosecond()/1e3, 6)
+	itoa(w, timestamp.Nanosecond()/1e3, 6)
 
 	writeString(w, " ")
 
 	// Write log level
 	var level string
-	switch l.logLevel {
+	switch logLevel {
 	case Dbg:
 		level = "DBG "
 	case Nfo:
