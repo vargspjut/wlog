@@ -84,11 +84,33 @@ func (t TextFormatter) Format(w io.Writer, logLevel LogLevel, wl WLogger, msg st
 	// Append log message to buffer
 	writeString(w, msg)
 
+	if len(wl.GetFields()) > 0 {
+		writeString(w, " [ ")
+		writeFields(w, wl.GetFields())
+		writeString(w, "]")
+	}
+
+	for key, value := range wl.GetFields() {
+		writeString(w, key)
+		writeString(w, "=")
+		writeString(w, fmt.Sprintf("%v", value))
+		writeString(w, ", ")
+	}
+
 	if len(msg) == 0 || msg[len(msg)-1] != '\n' {
 		writeString(w, "\n")
 	}
 
 	return nil
+}
+
+func writeFields(w io.Writer, fields Fields) {
+	for key, value := range fields {
+		writeString(w, key)
+		writeString(w, "=")
+		writeString(w, fmt.Sprintf("%v", value))
+		writeString(w, ", ")
+	}
 }
 
 func getTimestamp(now time.Time) string {
