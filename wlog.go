@@ -142,7 +142,7 @@ func (l *Logger) WithScope(fields Fields) *ScopedLogger {
 	for k, v := range l.fields {
 		scopeFields[k] = v
 	}
-	return &ScopedLogger{scopeFields, l, JSONFormatter{}}
+	return &ScopedLogger{scopeFields, l, l.formatter}
 }
 
 // SetGlobalFields set fields in a global wlog instance. These fields will be appended to any
@@ -156,7 +156,6 @@ func (l *Logger) SetGlobalFields(f Fields) {
 	l.lock.Lock()
 	defer l.lock.Unlock()
 	l.fields = fields
-	l.formatter = JSONFormatter{}
 }
 
 // Debugf formats and logs a debug message
