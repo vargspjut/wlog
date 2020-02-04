@@ -90,13 +90,6 @@ func (t TextFormatter) Format(w io.Writer, logLevel LogLevel, wl WLogger, msg st
 		writeString(w, "]")
 	}
 
-	for key, value := range wl.GetFields() {
-		writeString(w, key)
-		writeString(w, "=")
-		writeString(w, fmt.Sprintf("%v", value))
-		writeString(w, ", ")
-	}
-
 	if len(msg) == 0 || msg[len(msg)-1] != '\n' {
 		writeString(w, "\n")
 	}
