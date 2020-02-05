@@ -13,8 +13,8 @@ func Test_JSONFormatter(t *testing.T) {
 		formatter Formatter
 	}
 	tests := []struct {
-		name string
-		args args
+		name           string
+		args           args
 		resultTemplate string
 	}{
 		{
