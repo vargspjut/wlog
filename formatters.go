@@ -33,7 +33,7 @@ func (j JSONFormatter) Format(w io.Writer, logLevel LogLevel, wl WLogger, msg st
 
 	fields[j.getKey("msg")] = msg
 	fields[j.getKey("timestamp")] = getTimestamp(timestamp)
-	fields[j.getKey("loglevel")] = logLevel.String()
+	fields[j.getKey("level")] = logLevel.String()
 
 	encoder := json.NewEncoder(w)
 
