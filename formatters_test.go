@@ -35,6 +35,7 @@ func Test_JSONFormatter(t *testing.T) {
 			logger := DefaultLogger()
 			logger.SetLogLevel(Nfo)
 			logger.SetFormatter(tt.args.formatter)
+			logger.SetStdOut(false)
 			logger.SetGlobalFields(Fields{"field1": "test value"})
 
 			buf := &bytes.Buffer{}
