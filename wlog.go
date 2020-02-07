@@ -84,6 +84,8 @@ type WLogger interface {
 	Fatal(v ...interface{})
 	GetFields() Fields
 	GetLogLevel() LogLevel
+	lock()
+	unlock()
 }
 
 // Fields is a map containing the fields that will be added to every log entry
@@ -94,7 +96,7 @@ type Logger struct {
 	writer    io.Writer
 	logLevel  LogLevel
 	stdOut    bool
-	lock      sync.Mutex
+	mux       sync.Mutex
 	hooks     map[LogLevel][]HookFunc
 	fields    Fields
 	formatter Formatter
@@ -103,6 +105,14 @@ type Logger struct {
 var bufferPool = sync.Pool{New: func() interface{} {
 	return new(bytes.Buffer)
 }}
+
+func (l *Logger) lock() {
+	l.mux.Lock()
+}
+
+func (l *Logger) unlock() {
+	l.mux.Unlock()
+}
 
 // Configure configures the logger
 func (l *Logger) Configure(cfg *Config) {
@@ -142,7 +152,7 @@ func (l *Logger) WithScope(fields Fields) *ScopedLogger {
 	for k, v := range l.fields {
 		scopeFields[k] = v
 	}
-	return &ScopedLogger{scopeFields, l, l.formatter}
+	return &ScopedLogger{scopeFields, l, l.formatter, sync.Mutex{}}
 }
 
 // SetGlobalFields set fields in a global wlog instance. These fields will be appended to any
@@ -153,8 +163,8 @@ func (l *Logger) SetGlobalFields(f Fields) {
 		fields = Fields{}
 	}
 
-	l.lock.Lock()
-	defer l.lock.Unlock()
+	l.lock()
+	defer l.unlock()
 	l.fields = fields
 }
 
@@ -224,8 +234,8 @@ func (l *Logger) Fatal(v ...interface{}) {
 
 // InstallHook installs a hook that will be called when a log event occurs
 func (l *Logger) InstallHook(logLevel LogLevel, hook HookFunc) {
-	l.lock.Lock()
-	defer l.lock.Unlock()
+	l.lock()
+	defer l.unlock()
 
 	if l.hooks == nil {
 		l.hooks = make(map[LogLevel][]HookFunc)
@@ -281,22 +291,22 @@ func write(l *Logger, buffer *bytes.Buffer, logLevel LogLevel, msg string, times
 
 // SetFormatter sets or clears the writer of the logger
 func (l *Logger) SetFormatter(formatter Formatter) {
-	l.lock.Lock()
-	defer l.lock.Unlock()
+	l.lock()
+	defer l.unlock()
 	l.formatter = formatter
 }
 
 // SetWriter sets or clears the writer of the logger
 func (l *Logger) SetWriter(writer io.Writer) {
-	l.lock.Lock()
-	defer l.lock.Unlock()
+	l.lock()
+	defer l.unlock()
 	l.writer = writer
 }
 
 // SetLogLevel sets the log level of the logger
 func (l *Logger) SetLogLevel(logLevel LogLevel) {
-	l.lock.Lock()
-	defer l.lock.Unlock()
+	l.lock()
+	defer l.unlock()
 	l.logLevel = logLevel
 }
 
@@ -312,8 +322,8 @@ func (l *Logger) GetFields() Fields {
 
 // SetStdOut sets or clears writing to standard output
 func (l *Logger) SetStdOut(enable bool) {
-	l.lock.Lock()
-	defer l.lock.Unlock()
+	l.lock()
+	defer l.unlock()
 	l.stdOut = enable
 }
 

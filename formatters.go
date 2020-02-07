@@ -31,9 +31,11 @@ func (j JSONFormatter) getKey(key string) string {
 func (j JSONFormatter) Format(w io.Writer, logLevel LogLevel, wl WLogger, msg string, timestamp time.Time) error {
 	fields := wl.GetFields()
 
+	wl.lock()
 	fields[j.getKey("msg")] = msg
 	fields[j.getKey("timestamp")] = getTimestamp(timestamp)
 	fields[j.getKey("level")] = logLevel.String()
+	wl.unlock()
 
 	encoder := json.NewEncoder(w)
 
