@@ -16,15 +16,15 @@ type ScopedLogger struct {
 	fields    Fields
 	logger    *Logger
 	formatter Formatter
-	mux       sync.Mutex
+	mutex     sync.Mutex
 }
 
 func (s *ScopedLogger) lock() {
-	s.mux.Lock()
+	s.mutex.Lock()
 }
 
 func (s *ScopedLogger) unlock() {
-	s.mux.Unlock()
+	s.mutex.Unlock()
 }
 
 // GetFields implements WLogger.GetFields

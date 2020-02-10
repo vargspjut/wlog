@@ -96,7 +96,7 @@ type Logger struct {
 	writer    io.Writer
 	logLevel  LogLevel
 	stdOut    bool
-	mux       sync.Mutex
+	mutex     sync.Mutex
 	hooks     map[LogLevel][]HookFunc
 	fields    Fields
 	formatter Formatter
@@ -107,11 +107,11 @@ var bufferPool = sync.Pool{New: func() interface{} {
 }}
 
 func (l *Logger) lock() {
-	l.mux.Lock()
+	l.mutex.Lock()
 }
 
 func (l *Logger) unlock() {
-	l.mux.Unlock()
+	l.mutex.Unlock()
 }
 
 // Configure configures the logger
@@ -152,7 +152,7 @@ func (l *Logger) WithScope(fields Fields) *ScopedLogger {
 	for k, v := range l.fields {
 		scopeFields[k] = v
 	}
-	return &ScopedLogger{scopeFields, l, l.formatter, sync.Mutex{}}
+	return &ScopedLogger{fields: scopeFields, logger: l, formatter: l.formatter}
 }
 
 // SetGlobalFields set fields in a global wlog instance. These fields will be appended to any
