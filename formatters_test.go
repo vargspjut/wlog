@@ -9,22 +9,46 @@ import (
 )
 
 func Test_JSONFormatter(t *testing.T) {
-
-	now := time.Now()
-	expected := fmt.Sprintf(`{"field1":"test value","level":"Info","msg":"test value","timestamp":"%s"}`, getTimestamp(now))
-
-	SetLogLevel(Nfo)
-	SetGlobalFields(Fields{"field1": "test value"})
-
-	buf := &bytes.Buffer{}
-
-	if err := logger.formatter.Format(buf, Nfo, logger, "test value", now); err != nil {
-		t.Fatalf("failed to format the log entry, err: %s", err)
+	type args struct {
+		formatter Formatter
 	}
+	tests := []struct {
+		name           string
+		args           args
+		resultTemplate string
+	}{
+		{
+			"Parse to JSON",
+			args{JSONFormatter{}},
+			`{"field1":"test value","level":"Info","msg":"test value","timestamp":"%s"}`},
+		{
+			"Parse to JSON with compact fields",
+			args{JSONFormatter{Compact: true}},
+			`{"@l":"Info","@m":"test value","@t":"%s","field1":"test value"}`,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			now := time.Now()
+			want := fmt.Sprintf(tt.resultTemplate, getTimestamp(now))
 
-	result := strings.TrimSuffix(buf.String(), "\n")
+			logger := DefaultLogger()
+			logger.SetLogLevel(Nfo)
+			logger.SetFormatter(tt.args.formatter)
+			logger.SetStdOut(false)
+			logger.SetGlobalFields(Fields{"field1": "test value"})
 
-	if result != expected {
-		t.Fatalf("Expected: %s, got %s", expected, result)
+			buf := &bytes.Buffer{}
+
+			if err := logger.formatter.Format(buf, Nfo, logger, "test value", now); err != nil {
+				t.Fatalf("failed to format the log entry, err: %s", err)
+			}
+
+			got := strings.TrimSuffix(buf.String(), "\n")
+
+			if got != want {
+				t.Errorf("formatter.Format() = %v, want %v", got, want)
+			}
+		})
 	}
 }

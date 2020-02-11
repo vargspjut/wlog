@@ -79,6 +79,7 @@ import "github.com/vargspjut/wlog"
 func main() {
 
     wlog.SetLogLevel(wlog.Nfo)
+    wlog.SetFormatter(wlog.JSONFormatter{})
     wlog.SetGlobalFields(wlog.Fields{"userId": "dd18f2b6-35df-11ea-bb24-c0b88337ca26"})
 
     logger := wlog.WithScope(wlog.Fields{"field1": "field1_value"})
@@ -99,6 +100,25 @@ Running this code you should see the output below:
 {"field1":"field1_value","level":"Info","msg":"This is another log entry","timestamp":"2020-01-23 09:57:54:157273","userId":"dd18f2b6-35df-11ea-bb24-c0b88337ca26"}
 ``` 
 Note that we call the method `Info` two times with different messages, however, the field `userId` added to the global scope sticks with the logger and it is part of the log entry at all times. This behaviour was inspired by the great library [logrus](https://github.com/sirupsen/logrus)
+
+The `JsonFormatter` has support for compact property names, this can be achieved by setting its
+property `Compact` to `true`, like so:
+
+```golang
+wlog.SetLogLevel(wlog.Nfo)
+wlog.SetFormatter(wlog.JSONFormatter{Compact: true})
+wlog.SetGlobalFields(wlog.Fields{"userId": "dd18f2b6-35df-11ea-bb24-c0b88337ca26"})
+
+wlog.Info("This is a log entry")
+```
+Output:
+```json
+{"@l":"Info","@m":"This is a log entry","@t":"2020-02-05 12:19:30:163927","userId":"dd18f2b6-35df-11ea-bb24-c0b88337ca26"}
+```
+Note that, the default fields `level`, `timestamp` and `message` are renamed to its first letter prefixed
+with a `@` symbol. The `Compact` property in the `JsonFormatter` is optional and it is set to `false`
+by default.
+
 ## Test
 ```
 go test

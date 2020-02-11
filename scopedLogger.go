@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"fmt"
 	"os"
+	"sync"
 	"time"
 )
 
@@ -15,6 +16,15 @@ type ScopedLogger struct {
 	fields    Fields
 	logger    *Logger
 	formatter Formatter
+	mutex     sync.Mutex
+}
+
+func (s *ScopedLogger) lock() {
+	s.mutex.Lock()
+}
+
+func (s *ScopedLogger) unlock() {
+	s.mutex.Unlock()
 }
 
 // GetFields implements WLogger.GetFields
