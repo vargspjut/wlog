@@ -27,7 +27,7 @@ func (j JSONFormatter) getKey(key string) string {
 	return key
 }
 
-// Implements Formatter.Format
+// Format implements Formatter.Format to support JSON
 func (j JSONFormatter) Format(w io.Writer, logLevel LogLevel, msg string, timestamp time.Time, fields Fields) error {
 
 	if fields == nil {
@@ -50,7 +50,7 @@ func (j JSONFormatter) Format(w io.Writer, logLevel LogLevel, msg string, timest
 // formatter when creating a instance of wlog.
 type TextFormatter struct{}
 
-// Implements Formatter.Format
+// Format Implements Formatter.Format to support Text
 func (t TextFormatter) Format(w io.Writer, logLevel LogLevel, msg string, timestamp time.Time, fields Fields) error {
 
 	// Write Date

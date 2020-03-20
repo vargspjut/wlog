@@ -5,10 +5,9 @@ import (
 	"os"
 )
 
-// scopedLogger is a lighter version of Logger. It implements all the
-// logging methods and the interface WLogger. This type is used when it is necessary
-// to have a separate scope where it is possible to add fields without interfering with the
-// global instance of Logger. scopedLogger instances are created  by calling wlog.WithScope
+// scopedLogger implements interface WLogger. This type is used when it is necessary
+// to have a separate scope where it's possible to add fields without interfering with the
+// parent Logger instance. scopedLogger instances are created  by calling wlog.WithScope
 type scopedLogger struct {
 	logger *Logger
 	fields Fields
