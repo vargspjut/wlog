@@ -8,7 +8,7 @@ import (
 	"time"
 )
 
-func Test_JSONFormatter(t *testing.T) {
+func TestJSONFormatter(t *testing.T) {
 	type args struct {
 		formatter Formatter
 	}
