@@ -1,6 +1,7 @@
 package wlog
 
 import (
+	"bytes"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -53,25 +54,8 @@ type TextFormatter struct{}
 // Format Implements Formatter.Format to support Text
 func (t TextFormatter) Format(w io.Writer, logLevel LogLevel, msg string, timestamp time.Time, fields Fields) error {
 
-	// Write Date
-	year, month, day := timestamp.Date()
-	itoa(w, year, 4)
-	writeString(w, "-")
-	itoa(w, int(month), 2)
-	writeString(w, "-")
-	itoa(w, day, 2)
-
-	writeString(w, " ")
-
-	// Write time
-	hour, min, sec := timestamp.Clock()
-	itoa(w, hour, 2)
-	writeString(w, ":")
-	itoa(w, min, 2)
-	writeString(w, ":")
-	itoa(w, sec, 2)
-	writeString(w, ":")
-	itoa(w, timestamp.Nanosecond()/1e3, 6)
+	// Write date and time
+	writeString(w, getTimestamp(timestamp))
 
 	writeString(w, " ")
 
@@ -117,14 +101,33 @@ func writeFields(w io.Writer, fields Fields) {
 	}
 }
 
-func getTimestamp(now time.Time) string {
-	year, month, day := now.Date()
-	hour, min, sec := now.Clock()
-	nano := now.Nanosecond() / 1e3
+func getTimestamp(timestamp time.Time) string {
 
-	format := "%d-%02d-%02d %02d:%02d:%02d:%06d"
+	w := bufferPool.Get().(*bytes.Buffer)
+	defer bufferPool.Put(w)
+	w.Reset()
 
-	return fmt.Sprintf(format, year, month, day, hour, min, sec, nano)
+	// Write Date
+	year, month, day := timestamp.Date()
+	itoa(w, year, 4)
+	writeString(w, "-")
+	itoa(w, int(month), 2)
+	writeString(w, "-")
+	itoa(w, day, 2)
+
+	writeString(w, " ")
+
+	// Write time
+	hour, min, sec := timestamp.Clock()
+	itoa(w, hour, 2)
+	writeString(w, ":")
+	itoa(w, min, 2)
+	writeString(w, ":")
+	itoa(w, sec, 2)
+	writeString(w, ":")
+	itoa(w, timestamp.Nanosecond()/1e3, 6)
+
+	return string(w.Bytes())
 }
 
 func writeString(w io.Writer, str string) {
