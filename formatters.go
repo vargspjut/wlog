@@ -12,7 +12,7 @@ import (
 // one method called Format which will be called when outputting
 // the write entry
 type Formatter interface {
-	Format(w io.Writer, logLevel LogLevel, l WLogger, msg string, timestamp time.Time) error
+	Format(w io.Writer, logLevel LogLevel, msg string, timestamp time.Time, fields Fields) error
 }
 
 // JSONFormatter used to output logs in JSON format
@@ -28,17 +28,17 @@ func (j JSONFormatter) getKey(key string) string {
 }
 
 // Implements Formatter.Format
-func (j JSONFormatter) Format(w io.Writer, logLevel LogLevel, wl WLogger, msg string, timestamp time.Time) error {
-	fields := wl.GetFields()
+func (j JSONFormatter) Format(w io.Writer, logLevel LogLevel, msg string, timestamp time.Time, fields Fields) error {
 
-	wl.lock()
+	if fields == nil {
+		fields = Fields{}
+	}
+
 	fields[j.getKey("msg")] = msg
 	fields[j.getKey("timestamp")] = getTimestamp(timestamp)
 	fields[j.getKey("level")] = logLevel.String()
-	wl.unlock()
 
 	encoder := json.NewEncoder(w)
-
 	if err := encoder.Encode(fields); err != nil {
 		return fmt.Errorf("failed to marshal fields to JSON, %v", err)
 	}
@@ -51,7 +51,7 @@ func (j JSONFormatter) Format(w io.Writer, logLevel LogLevel, wl WLogger, msg st
 type TextFormatter struct{}
 
 // Implements Formatter.Format
-func (t TextFormatter) Format(w io.Writer, logLevel LogLevel, wl WLogger, msg string, timestamp time.Time) error {
+func (t TextFormatter) Format(w io.Writer, logLevel LogLevel, msg string, timestamp time.Time, fields Fields) error {
 
 	// Write Date
 	year, month, day := timestamp.Date()
@@ -95,9 +95,9 @@ func (t TextFormatter) Format(w io.Writer, logLevel LogLevel, wl WLogger, msg st
 	// Append log message to buffer
 	writeString(w, msg)
 
-	if len(wl.GetFields()) > 0 {
+	if len(fields) > 0 {
 		writeString(w, " [ ")
-		writeFields(w, wl.GetFields())
+		writeFields(w, fields)
 		writeString(w, "]")
 	}
 
