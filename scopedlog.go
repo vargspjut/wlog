@@ -5,20 +5,20 @@ import (
 	"os"
 )
 
-// scopedLogger implements interface WLogger. This type is used when it is necessary
+// scopedLogger implements interface Logger. This type is used when it is necessary
 // to have a separate scope where it's possible to add fields without interfering with the
-// parent Logger instance. scopedLogger instances are created  by calling wlog.WithScope
+// parent Logger instance
 type scopedLogger struct {
-	logger *Logger
+	logger *logger
 	fields Fields
 }
 
-// GetLogLevel implements WLogger.GetLogLevel
+// GetLogLevel implements Logger.GetLogLevel
 func (s *scopedLogger) GetLogLevel() LogLevel {
 	return s.logger.logLevel
 }
 
-// GetFields implements WLogger.GetFields
+// GetFields implements Logger.GetFields
 func (s *scopedLogger) GetFields() Fields {
 	return s.fields
 }
@@ -79,4 +79,30 @@ func (s *scopedLogger) Fatalf(format string, v ...interface{}) {
 func (s *scopedLogger) Fatal(v ...interface{}) {
 	s.logger.writeWithFields(Ftl, fmt.Sprint(v...), s.fields)
 	os.Exit(1)
+}
+
+// GetFormatter gets the writer of the logger
+func (s *scopedLogger) GetFormatter() Formatter {
+	return s.logger.GetFormatter()
+}
+
+// WithScope returns a new instance of Logger based on this Logger.
+// Any fields from this Logger will be included to the new
+// scoped Logger instance
+func (s *scopedLogger) WithScope(fields Fields) Logger {
+
+	// Input should not be touched. Make a value copy
+	scopeFields := Fields{}
+
+	// Copy scoped fields from this instance
+	for k, v := range s.fields {
+		scopeFields[k] = v
+	}
+
+	// Copy new scoped fields
+	for k, v := range fields {
+		scopeFields[k] = v
+	}
+
+	return &scopedLogger{s.logger, scopeFields}
 }
