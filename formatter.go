@@ -80,7 +80,7 @@ func (t TextFormatter) Format(w io.Writer, logLevel LogLevel, msg string, timest
 	writeString(w, msg)
 
 	if len(fields) > 0 {
-		writeString(w, " [ ")
+		writeString(w, " [")
 		writeFields(w, fields)
 		writeString(w, "]")
 	}
@@ -93,11 +93,16 @@ func (t TextFormatter) Format(w io.Writer, logLevel LogLevel, msg string, timest
 }
 
 func writeFields(w io.Writer, fields Fields) {
+	count := len(fields)
+	idx := 0
 	for key, value := range fields {
+		idx++
 		writeString(w, key)
-		writeString(w, "=")
+		writeString(w, ": ")
 		writeString(w, fmt.Sprintf("%v", value))
-		writeString(w, ", ")
+		if idx < count {
+			writeString(w, ", ")
+		}
 	}
 }
 
