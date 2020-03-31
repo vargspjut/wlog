@@ -31,16 +31,20 @@ func (j JSONFormatter) getKey(key string) string {
 // Format implements Formatter.Format to support JSON
 func (j JSONFormatter) Format(w io.Writer, logLevel LogLevel, msg string, timestamp time.Time, fields Fields) error {
 
-	if fields == nil {
-		fields = Fields{}
+	// Standard fields
+	out := Fields{
+		j.getKey("msg"):       msg,
+		j.getKey("timestamp"): getTimestamp(timestamp),
+		j.getKey("level"):     logLevel.String(),
 	}
 
-	fields[j.getKey("msg")] = msg
-	fields[j.getKey("timestamp")] = getTimestamp(timestamp)
-	fields[j.getKey("level")] = logLevel.String()
+	// And any custom ones
+	for k, v := range fields {
+		out[k] = v
+	}
 
 	encoder := json.NewEncoder(w)
-	if err := encoder.Encode(fields); err != nil {
+	if err := encoder.Encode(out); err != nil {
 		return fmt.Errorf("failed to marshal fields to JSON, %v", err)
 	}
 
