@@ -69,7 +69,7 @@ wlog.Warning("This is a Warning log entry. No hooks installed")
 ```
 
 ### Structured logs
-*wlog* provides support for structured logs allowing the addition of fields to a `Logger` global scope and also create scoped logger. See the code snippet below:
+*wlog* provides support for structured logs allowing additional fields to be added to a mutable `Logger` instance. This includes the default logger and any new loggers created with wlog.New(...). You can also create a scoped logger based on any Logger instance that will inherit the fields from the parent Logger. See the code snippet below:
 
 ```golang
 package main
@@ -78,28 +78,45 @@ import "github.com/vargspjut/wlog"
 
 func main() {
 
+    // The default logger
     wlog.SetLogLevel(wlog.Nfo)
     wlog.SetFormatter(wlog.JSONFormatter{})
-    wlog.SetGlobalFields(wlog.Fields{"userId": "dd18f2b6-35df-11ea-bb24-c0b88337ca26"})
+    wlog.SetFields(wlog.Fields{"userId": "dd18f2b6-35df-11ea-bb24-c0b88337ca26"})
 
-    logger := wlog.WithScope(wlog.Fields{"field1": "field1_value"})
+    // Create a scoped logger based on the default logger
+    scopedLogger1 := wlog.WithScope(wlog.Fields{"field1": "field1_value"})
 
-    logger.Info("This is a log entry")
-    logger.Info("This is another log entry")
+    scopedLogger1.Info("This is an log entry")
+    scopedLogger1.Info("This is another log entry")
 
+    // Create a new scoped logger based on a another scoped logger
+    scopedLogger2 := scopedLogger1.WithScope(wlog.Fields{"field2": "field2_value"})
+
+    scopedLogger2.Info("This scoped logger is inherited from scopedLogger1")
+
+    // Create a new mutable logger
+    logger := wlog.New(nil, wlog.Nfo, true)
+    logger.SetFormatter(wlog.JSONFormatter{})
+    logger.SetFields(wlog.Fields{"tenantId": "aa18f2b6-35df-11ea-bb24-c0b88337ca26"})
+
+    logger.Info("This is a new logger with no relation to above loggers")
+
+    // Create a new scoped logger based on logger
+    scopedLogger3 := logger.WithScope(wlog.Fields{"field3": "field3_value"})
+
+    scopedLogger3.Info("This scoped logger is inherited from logger")
 }
 ```
-Here, *wlog* is set the log level `INFO` and after that we invoke the method `SetGlobalFields` passing `wlog.Fields` which is a alias type to `map[string]interface{}`.
-`SetGlobalFields` will attach `Fields` to the `Logger` global scope. Next, the `WithScope` method is called receiving `Fields` as arguments, this will return a new scope with `Fields` attached to it, this new scope will contain its own list of `Fields`, plus 
-the fields previously added to the global scope. Child scopes use the `JSONFormatter` by default.
+Here, *wlog* is set the log level `INFO` and after that we invoke the method `SetFields` passing `wlog.Fields` which is an alias type to `map[string]interface{}`. `SetFields` will attach `Fields` to the `Logger` default scope. Next, the `WithScope` method is called receiving `Fields` as arguments, this will return a new scope with `Fields` attached to it, this new scope will contain its own list of `Fields`, plus 
+the fields previously added to the default scope. The rest of the example demonstrates variants on this behaviour. Child scopes use the `JSONFormatter` by default.
  
-Running this code you should see the output below:
+Running this code you should a similar output to this:
 
 ```json
 {"field1":"field1_value","level":"Info","msg":"This is a log entry","timestamp":"2020-01-23 09:57:54:157141","userId":"dd18f2b6-35df-11ea-bb24-c0b88337ca26"}
 {"field1":"field1_value","level":"Info","msg":"This is another log entry","timestamp":"2020-01-23 09:57:54:157273","userId":"dd18f2b6-35df-11ea-bb24-c0b88337ca26"}
 ``` 
-Note that we call the method `Info` two times with different messages, however, the field `userId` added to the global scope sticks with the logger and it is part of the log entry at all times. This behaviour was inspired by the great library [logrus](https://github.com/sirupsen/logrus)
+Note that we call the method `Info` two times with different messages, however, the field `userId` added to the default logger sticks with the scoped logger and will be part of any log entry written by that logger or any of its descendants. This behaviour was inspired by the great library [logrus](https://github.com/sirupsen/logrus)
 
 The `JsonFormatter` has support for compact property names, this can be achieved by setting its
 property `Compact` to `true`, like so:
