@@ -9,7 +9,7 @@ import (
 	"time"
 )
 
-// Config allows configuration of the wlogger
+// Config allows configuration of a logger
 type Config struct {
 	LogLevel        LogLevel
 	Path            string
@@ -52,16 +52,16 @@ func (l LogLevel) String() string {
 type HookFunc func(time.Time, LogLevel, string)
 
 var (
-	logger *Logger
+	// The default logger instance
+	defaultLogger *logger
 )
 
 func init() {
-	logger = New(nil, Nfo, true)
+	defaultLogger = newLogger(nil, Nfo, true)
 }
 
-// New initialized a new logger object
-func New(writer io.Writer, logLevel LogLevel, stdOut bool) *Logger {
-	return &Logger{
+func newLogger(writer io.Writer, logLevel LogLevel, stdOut bool) *logger {
+	return &logger{
 		writer:    writer,
 		logLevel:  logLevel,
 		stdOut:    stdOut,
@@ -70,8 +70,17 @@ func New(writer io.Writer, logLevel LogLevel, stdOut bool) *Logger {
 	}
 }
 
-// WLogger is the interface that wlog loggers implements
-type WLogger interface {
+// New creates a new instance of a logger
+func New(writer io.Writer, logLevel LogLevel, stdOut bool) MutableLogger {
+	return newLogger(
+		writer,
+		logLevel,
+		stdOut,
+	)
+}
+
+// Logger is the interface that wlog loggers implements
+type Logger interface {
 	Debugf(format string, v ...interface{})
 	Debug(v ...interface{})
 	Infof(format string, v ...interface{})
@@ -84,15 +93,28 @@ type WLogger interface {
 	Fatal(v ...interface{})
 	GetFields() Fields
 	GetLogLevel() LogLevel
-	lock()
-	unlock()
+	GetFormatter() Formatter
+	WithScope(fields Fields) Logger
+}
+
+// MutableLogger extends the Logger interface by providing
+// mutable characteristics to a logger
+type MutableLogger interface {
+	Logger
+	SetFormatter(formatter Formatter)
+	SetStdOut(enable bool)
+	SetFields(fields Fields)
+	SetLogLevel(logLevel LogLevel)
+	Configure(cfg *Config)
 }
 
 // Fields is a map containing the fields that will be added to every log entry
 type Fields map[string]interface{}
 
-// Logger provides logging levels to standard logger library
-type Logger struct {
+// logger implements the MutableLogger interface
+// providing the default logger instance as well
+// as the base for new loggers created with New()
+type logger struct {
 	writer    io.Writer
 	logLevel  LogLevel
 	stdOut    bool
@@ -106,16 +128,16 @@ var bufferPool = sync.Pool{New: func() interface{} {
 	return new(bytes.Buffer)
 }}
 
-func (l *Logger) lock() {
+func (l *logger) lock() {
 	l.mutex.Lock()
 }
 
-func (l *Logger) unlock() {
+func (l *logger) unlock() {
 	l.mutex.Unlock()
 }
 
-// Configure configures the logger
-func (l *Logger) Configure(cfg *Config) {
+// Configure configures a mutable logger
+func (l *logger) Configure(cfg *Config) {
 	l.SetLogLevel(cfg.LogLevel)
 	l.SetStdOut(cfg.StdOut)
 
@@ -144,20 +166,39 @@ func (l *Logger) Configure(cfg *Config) {
 	}
 }
 
-// WithScope returns a new instance of ScopedLogger and its fields property
-// will contain the fields added to the global instance of Logger
-func (l *Logger) WithScope(fields Fields) *ScopedLogger {
-	scopeFields := fields
-	//copy the parent scope fields
+// WithScope returns a new instance of Logger. It's fields property
+// will contain the fields added to the parent instance of Logger
+func (l *logger) WithScope(fields Fields) Logger {
+
+	// Input should not be touched. Make a value copy
+	scopeFields := Fields{}
+
+	l.lock()
+	defer l.unlock()
+
+	// Copy scoped fields from this instance
 	for k, v := range l.fields {
 		scopeFields[k] = v
 	}
-	return &ScopedLogger{fields: scopeFields, logger: l, formatter: l.formatter}
+
+	// Copy new scoped fields
+	for k, v := range fields {
+		scopeFields[k] = v
+	}
+
+	return &scopedLogger{l, scopeFields}
 }
 
-// SetGlobalFields set fields in a global wlog instance. These fields will be appended to any
-// child scope created with wlog.WithScope method.
-func (l *Logger) SetGlobalFields(f Fields) {
+// SetGlobalFields set fields in a log instance. These fields will be appended to any
+// child scope created with log.WithScope method.
+// Deprecated: Please use SetFields instead.
+func (l *logger) SetGlobalFields(f Fields) {
+	l.SetFields(f)
+}
+
+// SetFields set fields for a MutableLogger instance. These fields will be appended to any
+// child scope created with log.WithScope method.
+func (l *logger) SetFields(f Fields) {
 	fields := f
 	if fields == nil {
 		fields = Fields{}
@@ -165,75 +206,76 @@ func (l *Logger) SetGlobalFields(f Fields) {
 
 	l.lock()
 	defer l.unlock()
+
 	l.fields = fields
 }
 
 // Debugf formats and logs a debug message
-func (l *Logger) Debugf(format string, v ...interface{}) {
+func (l *logger) Debugf(format string, v ...interface{}) {
 	// Debug is very verbose. Catch log-level early
 	// to save unnecessary parsing
 	if Dbg < l.logLevel {
 		return
 	}
 
-	l.writef(Dbg, fmt.Sprintf(format, v...))
+	l.write(Dbg, fmt.Sprintf(format, v...))
 }
 
 // Debug logs a debug message
-func (l *Logger) Debug(v ...interface{}) {
+func (l *logger) Debug(v ...interface{}) {
 	// Debug is very verbose. Catch log-level early
 	// to save unnecessary parsing
 	if Dbg < l.logLevel {
 		return
 	}
 
-	l.writef(Dbg, fmt.Sprint(v...))
+	l.write(Dbg, fmt.Sprint(v...))
 }
 
 // Infof formats and logs an informal message
-func (l *Logger) Infof(format string, v ...interface{}) {
-	l.writef(Nfo, fmt.Sprintf(format, v...))
+func (l *logger) Infof(format string, v ...interface{}) {
+	l.write(Nfo, fmt.Sprintf(format, v...))
 }
 
 // Info logs an informal message
-func (l *Logger) Info(v ...interface{}) {
-	l.writef(Nfo, fmt.Sprint(v...))
+func (l *logger) Info(v ...interface{}) {
+	l.write(Nfo, fmt.Sprint(v...))
 }
 
 // Warningf formats and logs a warning message
-func (l *Logger) Warningf(format string, v ...interface{}) {
-	l.writef(Wrn, fmt.Sprintf(format, v...))
+func (l *logger) Warningf(format string, v ...interface{}) {
+	l.write(Wrn, fmt.Sprintf(format, v...))
 }
 
 // Warning logs a warning message
-func (l *Logger) Warning(v ...interface{}) {
-	l.writef(Wrn, fmt.Sprint(v...))
+func (l *logger) Warning(v ...interface{}) {
+	l.write(Wrn, fmt.Sprint(v...))
 }
 
 // Errorf formats and logs an error message
-func (l *Logger) Errorf(format string, v ...interface{}) {
-	l.writef(Err, fmt.Sprintf(format, v...))
+func (l *logger) Errorf(format string, v ...interface{}) {
+	l.write(Err, fmt.Sprintf(format, v...))
 }
 
 // Error logs an error message
-func (l *Logger) Error(v ...interface{}) {
-	l.writef(Err, fmt.Sprint(v...))
+func (l *logger) Error(v ...interface{}) {
+	l.write(Err, fmt.Sprint(v...))
 }
 
 // Fatalf formats and logs an unrecoverable error message
-func (l *Logger) Fatalf(format string, v ...interface{}) {
-	l.writef(Ftl, fmt.Sprintf(format, v...))
+func (l *logger) Fatalf(format string, v ...interface{}) {
+	l.write(Ftl, fmt.Sprintf(format, v...))
 	os.Exit(1)
 }
 
 // Fatal logs an unrecoverable error message
-func (l *Logger) Fatal(v ...interface{}) {
-	l.writef(Ftl, fmt.Sprint(v...))
+func (l *logger) Fatal(v ...interface{}) {
+	l.write(Ftl, fmt.Sprint(v...))
 	os.Exit(1)
 }
 
 // InstallHook installs a hook that will be called when a log event occurs
-func (l *Logger) InstallHook(logLevel LogLevel, hook HookFunc) {
+func (l *logger) InstallHook(logLevel LogLevel, hook HookFunc) {
 	l.lock()
 	defer l.unlock()
 
@@ -244,28 +286,27 @@ func (l *Logger) InstallHook(logLevel LogLevel, hook HookFunc) {
 	l.hooks[logLevel] = append(l.hooks[logLevel], hook)
 }
 
-func (l *Logger) writef(logLevel LogLevel, msg string) {
+func (l *logger) write(logLevel LogLevel, msg string) {
+	l.writeWithFields(logLevel, msg, l.GetFields())
+}
+
+func (l *logger) writeWithFields(logLevel LogLevel, msg string, fields Fields) {
 	now := time.Now()
 
 	entryBuffer := bufferPool.Get().(*bytes.Buffer)
 	defer bufferPool.Put(entryBuffer)
 	entryBuffer.Reset()
 
-	if err := l.formatter.Format(entryBuffer, logLevel, l, msg, now); err != nil {
+	l.lock()
+	defer l.unlock()
+
+	if err := l.formatter.Format(entryBuffer, logLevel, msg, now, fields); err != nil {
 		fmt.Fprintf(os.Stderr, "error formatting the log entry: %v", err)
 	}
 
-	write(l, entryBuffer, logLevel, msg, now)
-}
-
-// write writes a log entry to file and possibly to standard output
-func write(l *Logger, buffer *bytes.Buffer, logLevel LogLevel, msg string, timestamp time.Time) {
-
-	logEntry := buffer.Bytes()
-
 	// Write to file if provided
 	if l.writer != nil {
-		if _, err := l.writer.Write(logEntry); err != nil {
+		if _, err := l.writer.Write(entryBuffer.Bytes()); err != nil {
 			fmt.Fprintf(os.Stderr, "could not write log entry to the file, err: %v", err)
 		}
 	}
@@ -276,7 +317,7 @@ func write(l *Logger, buffer *bytes.Buffer, logLevel LogLevel, msg string, times
 		if logLevel > Wrn {
 			output = os.Stderr
 		}
-		if _, err := buffer.WriteTo(output); err != nil {
+		if _, err := entryBuffer.WriteTo(output); err != nil {
 			fmt.Fprintf(os.Stderr, "could not write log entry to: %v", output)
 		}
 	}
@@ -284,44 +325,51 @@ func write(l *Logger, buffer *bytes.Buffer, logLevel LogLevel, msg string, times
 	// Call any installed hooks
 	if l.hooks != nil {
 		for _, h := range l.hooks[logLevel] {
-			h(timestamp, logLevel, msg)
+			h(now, logLevel, msg)
 		}
 	}
 }
 
 // SetFormatter sets or clears the writer of the logger
-func (l *Logger) SetFormatter(formatter Formatter) {
+func (l *logger) SetFormatter(formatter Formatter) {
 	l.lock()
 	defer l.unlock()
 	l.formatter = formatter
 }
 
+// GetFormatter gets the writer of the logger
+func (l *logger) GetFormatter() Formatter {
+	l.lock()
+	defer l.unlock()
+	return l.formatter
+}
+
 // SetWriter sets or clears the writer of the logger
-func (l *Logger) SetWriter(writer io.Writer) {
+func (l *logger) SetWriter(writer io.Writer) {
 	l.lock()
 	defer l.unlock()
 	l.writer = writer
 }
 
 // SetLogLevel sets the log level of the logger
-func (l *Logger) SetLogLevel(logLevel LogLevel) {
+func (l *logger) SetLogLevel(logLevel LogLevel) {
 	l.lock()
 	defer l.unlock()
 	l.logLevel = logLevel
 }
 
-// GetLogLevel implements WLogger.GetLogLevel
-func (l *Logger) GetLogLevel() LogLevel {
+// GetLogLevel implements Logger.GetLogLevel
+func (l *logger) GetLogLevel() LogLevel {
 	return l.logLevel
 }
 
-// GetFields implements WLogger.GetFields
-func (l *Logger) GetFields() Fields {
+// GetFields implements Logger.GetFields
+func (l *logger) GetFields() Fields {
 	return l.fields
 }
 
 // SetStdOut sets or clears writing to standard output
-func (l *Logger) SetStdOut(enable bool) {
+func (l *logger) SetStdOut(enable bool) {
 	l.lock()
 	defer l.unlock()
 	l.stdOut = enable
@@ -329,92 +377,100 @@ func (l *Logger) SetStdOut(enable bool) {
 
 // Debugf formats and logs a debug message
 func Debugf(format string, v ...interface{}) {
-	logger.Debugf(format, v...)
+	defaultLogger.Debugf(format, v...)
 }
 
 // Debug logs a debug message
 func Debug(v ...interface{}) {
-	logger.Debug(v...)
+	defaultLogger.Debug(v...)
 }
 
 // Infof formats and logs an informal message
 func Infof(format string, v ...interface{}) {
-	logger.Infof(format, v...)
+	defaultLogger.Infof(format, v...)
 }
 
 // Info logs an informal message
 func Info(v ...interface{}) {
-	logger.Info(v...)
+	defaultLogger.Info(v...)
 }
 
 // Warningf formats and logs a warning message
 func Warningf(format string, v ...interface{}) {
-	logger.Warningf(format, v...)
+	defaultLogger.Warningf(format, v...)
 }
 
 // Warning logs a warning message
 func Warning(v ...interface{}) {
-	logger.Warning(v...)
+	defaultLogger.Warning(v...)
 }
 
 // Errorf formats and logs an error message
 func Errorf(format string, v ...interface{}) {
-	logger.Errorf(format, v...)
+	defaultLogger.Errorf(format, v...)
 }
 
 // Error logs an error message
 func Error(v ...interface{}) {
-	logger.Error(v...)
+	defaultLogger.Error(v...)
 }
 
 // Fatalf formats and logs an unrecoverable error message
 func Fatalf(format string, v ...interface{}) {
-	logger.Fatalf(format, v...)
+	defaultLogger.Fatalf(format, v...)
 }
 
 // Fatal logs an unrecoverable error message
 func Fatal(v ...interface{}) {
-	logger.Fatal(v...)
+	defaultLogger.Fatal(v...)
 }
 
 // InstallHook installs a hook to the default logger
 // that will be called when a log event occurs
 func InstallHook(logLevel LogLevel, hook HookFunc) {
-	logger.InstallHook(logLevel, hook)
+	defaultLogger.InstallHook(logLevel, hook)
 }
 
 // SetFormatter sets the formatter to be used when outputting log entries
 func SetFormatter(formatter Formatter) {
-	logger.SetFormatter(formatter)
+	defaultLogger.SetFormatter(formatter)
 }
 
 // SetWriter sets or clears the writer of the default logger
 func SetWriter(writer io.Writer) {
-	logger.SetWriter(writer)
+	defaultLogger.SetWriter(writer)
 }
 
 // SetLogLevel sets the log level of the default logger
 func SetLogLevel(logLevel LogLevel) {
-	logger.SetLogLevel(logLevel)
+	defaultLogger.SetLogLevel(logLevel)
 }
 
 // SetStdOut sets or clears writing to standard output of the default logger
 func SetStdOut(enable bool) {
-	logger.SetStdOut(enable)
+	defaultLogger.SetStdOut(enable)
 }
 
 // DefaultLogger returns the default logger
-func DefaultLogger() *Logger {
-	return logger
+func DefaultLogger() MutableLogger {
+	return defaultLogger
 }
 
-// SetGlobalFields include Fields to the Logger instance setting the JSONFormatter by default
+// SetFields sets the fields for the default logger. These fields will be appended to any
+// child scope created with WithScope method.
+func SetFields(fields Fields) {
+	defaultLogger.SetFields(fields)
+}
+
+// SetGlobalFields sets the fields for the default logger. These fields will be appended to any
+// Deprecated: Please use SetFields instead
 func SetGlobalFields(fields Fields) {
-	logger.SetGlobalFields(fields)
+	SetFields(fields)
 }
 
-// WithScope returns a new instance of ScopedLogger and its fields property
-// will contain the fields added to the global instance of Logger
-func WithScope(fields Fields) *ScopedLogger {
-	return logger.WithScope(fields)
+// WithScope returns a new instance of Logger based on the default logger.
+// Any fields from the default logger will be included to the new
+// scoped Logger instance
+func WithScope(fields Fields) Logger {
+	return defaultLogger.WithScope(fields)
 }

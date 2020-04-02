@@ -8,7 +8,7 @@ import (
 	"time"
 )
 
-func Test_JSONFormatter(t *testing.T) {
+func TestJSONFormatter(t *testing.T) {
 	type args struct {
 		formatter Formatter
 	}
@@ -36,11 +36,11 @@ func Test_JSONFormatter(t *testing.T) {
 			logger.SetLogLevel(Nfo)
 			logger.SetFormatter(tt.args.formatter)
 			logger.SetStdOut(false)
-			logger.SetGlobalFields(Fields{"field1": "test value"})
+			logger.SetFields(Fields{"field1": "test value"})
 
 			buf := &bytes.Buffer{}
 
-			if err := logger.formatter.Format(buf, Nfo, logger, "test value", now); err != nil {
+			if err := logger.GetFormatter().Format(buf, Nfo, "test value", now, logger.GetFields()); err != nil {
 				t.Fatalf("failed to format the log entry, err: %s", err)
 			}
 
