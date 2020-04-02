@@ -31,21 +31,3 @@ func TestHooks(t *testing.T) {
 	Warning("This is a WRN log entry")
 	Error("This is a ERR log entry. No hooks installed for this level")
 }
-
-func TestScopedLog(t *testing.T) {
-
-	logger := New(nil, Nfo, true)
-	SetFields(Fields{"globalField1": "test value"})
-
-	// JSON Formatter
-	logger.SetFormatter(JSONFormatter{})
-	logger.Info("This is a non-scoped JSON logger")
-
-	scopedLogger := WithScope(Fields{"scope1": "scoped value1", "scope2": "scoped value2"})
-	scopedLogger.Info("This is a scoped JSON logger")
-
-	SetFields(Fields{})
-	logger.SetFormatter(TextFormatter{})
-	logger.Info("This is a non-scoped Text logger")
-
-}
