@@ -15,7 +15,7 @@ import (
 // the write entry
 type Formatter interface {
 	Format(w io.Writer, logLevel LogLevel, msg string, timestamp time.Time, fields Fields) error
-	AddMapping(fieldMapptin FieldMapping)
+	AddMapping(fieldMapping FieldMapping)
 }
 
 // JSONFormatter used to output logs in JSON format
