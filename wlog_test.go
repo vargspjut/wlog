@@ -34,7 +34,7 @@ func TestHooks(t *testing.T) {
 	Error("This is a ERR log entry. No hooks installed for this level")
 }
 
-func TestLogging(t *testing.T) {
+func TestFieldMapping(t *testing.T) {
 
 	SetFormatter(&JSONFormatter{
 		FieldMapping: FieldMapping{"tenantId": "tid"},
