@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"io"
 	"os"
+	"strings"
 	"time"
 )
 
@@ -14,18 +15,47 @@ import (
 // the write entry
 type Formatter interface {
 	Format(w io.Writer, logLevel LogLevel, msg string, timestamp time.Time, fields Fields) error
+	AddMapping(fieldMapptin FieldMapping)
 }
 
 // JSONFormatter used to output logs in JSON format
 type JSONFormatter struct {
-	Compact bool
+	FieldMapping FieldMapping
+	Compact      bool
 }
 
 func (j JSONFormatter) getKey(key string) string {
 	if j.Compact {
-		return "@" + key[:1]
+		var mappedKey string
+		var ok bool
+
+		if mappedKey, ok = j.FieldMapping[key]; !ok {
+			mappedKey = key
+		}
+
+		return mappedKey
 	}
 	return key
+}
+
+func (j *JSONFormatter) AddMapping(fieldMapping FieldMapping) {
+	var mapping = make(FieldMapping, 3)
+
+	// first add the custom mappings
+	for k, v := range fieldMapping {
+		if strings.HasPrefix(v, "@") {
+			fmt.Fprintf(os.Stderr, "value cannot be prefixed with @: %s", v)
+			os.Exit(1)
+		}
+		mapping[k] = v
+	}
+
+	// add the default mappings
+	for k, v := range j.FieldMapping {
+		mapping[k] = v
+	}
+
+	j.FieldMapping = mapping
 }
 
 // Format implements Formatter.Format to support JSON
@@ -33,14 +63,14 @@ func (j JSONFormatter) Format(w io.Writer, logLevel LogLevel, msg string, timest
 
 	// Standard fields
 	out := Fields{
-		j.getKey("msg"):       msg,
-		j.getKey("timestamp"): getTimestamp(timestamp),
-		j.getKey("level"):     logLevel.String(),
+		"@m": msg,
+		"@t": getTimestamp(timestamp),
+		"@l": logLevel.String(),
 	}
 
 	// And any custom ones
 	for k, v := range fields {
-		out[k] = v
+		out[j.getKey(k)] = v
 	}
 
 	encoder := json.NewEncoder(w)
@@ -54,6 +84,11 @@ func (j JSONFormatter) Format(w io.Writer, logLevel LogLevel, msg string, timest
 // TextFormatter used to output logs in text format. This is the default
 // formatter when creating a instance of wlog.
 type TextFormatter struct{}
+
+func (j TextFormatter) AddMapping(fieldMapping FieldMapping) {
+	fmt.Fprintf(os.Stderr, "mapping fields is only supported by JSONFormatter")
+	os.Exit(0)
+}
 
 // Format Implements Formatter.Format to support Text
 func (t TextFormatter) Format(w io.Writer, logLevel LogLevel, msg string, timestamp time.Time, fields Fields) error {

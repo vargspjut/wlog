@@ -19,11 +19,11 @@ func TestJSONFormatter(t *testing.T) {
 	}{
 		{
 			"Parse to JSON",
-			args{JSONFormatter{}},
+			args{&JSONFormatter{}},
 			`{"field1":"test value","level":"Info","msg":"test value","timestamp":"%s"}`},
 		{
 			"Parse to JSON with compact fields",
-			args{JSONFormatter{Compact: true}},
+			args{&JSONFormatter{Compact: true}},
 			`{"@l":"Info","@m":"test value","@t":"%s","field1":"test value"}`,
 		},
 	}

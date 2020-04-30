@@ -9,6 +9,10 @@ import (
 	"time"
 )
 
+// FieldMapping is used to map field names when using
+// JSONFormatter in compact mode
+type FieldMapping map[string]string
+
 // Config allows configuration of a logger
 type Config struct {
 	LogLevel        LogLevel
@@ -16,6 +20,7 @@ type Config struct {
 	TruncateOnStart bool
 	StdOut          bool
 	Formatter       Formatter
+	FieldMapping    FieldMapping
 }
 
 // LogLevel controls how verbose the output will be
@@ -106,6 +111,7 @@ type MutableLogger interface {
 	SetFields(fields Fields)
 	SetLogLevel(logLevel LogLevel)
 	Configure(cfg *Config)
+	AddFieldMapping(fieldMapping FieldMapping)
 }
 
 // Fields is a map containing the fields that will be added to every log entry
@@ -134,6 +140,13 @@ func (l *logger) lock() {
 
 func (l *logger) unlock() {
 	l.mutex.Unlock()
+}
+
+// AddFieldMapping add custom field mapping for structured log
+func (l *logger) AddFieldMapping(fieldMapping FieldMapping) {
+	l.lock()
+	defer l.unlock()
+	l.formatter.AddMapping(fieldMapping)
 }
 
 // Configure configures a mutable logger
@@ -429,6 +442,11 @@ func Fatal(v ...interface{}) {
 // that will be called when a log event occurs
 func InstallHook(logLevel LogLevel, hook HookFunc) {
 	defaultLogger.InstallHook(logLevel, hook)
+}
+
+// AddFieldMapping add custom field mapping for structured log
+func AddFieldMapping(fieldMapping FieldMapping) {
+	defaultLogger.AddFieldMapping(fieldMapping)
 }
 
 // SetFormatter sets the formatter to be used when outputting log entries
