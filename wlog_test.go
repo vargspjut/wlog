@@ -47,7 +47,7 @@ func TestFieldMapping(t *testing.T) {
 
 	SetWriter(w)
 
-	AddFieldMapping(FieldMapping{"name": "n", "address": "addr"})
+	SetFieldMapping(FieldMapping{"name": "n", "address": "addr"})
 
 	logger := WithScope(Fields{"tenantId": "1223456", "name": "user", "address": "my street"})
 

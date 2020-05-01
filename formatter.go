@@ -15,7 +15,7 @@ import (
 // the write entry
 type Formatter interface {
 	Format(w io.Writer, logLevel LogLevel, msg string, timestamp time.Time, fields Fields) error
-	AddMapping(fieldMapping FieldMapping)
+	SetFieldMapping(fieldMapping FieldMapping)
 }
 
 // JSONFormatter used to output logs in JSON format
@@ -38,14 +38,14 @@ func (j JSONFormatter) getKey(key string) string {
 	return key
 }
 
-func (j *JSONFormatter) AddMapping(fieldMapping FieldMapping) {
+// SetFieldMapping add custom field mapping for structured log
+func (j *JSONFormatter) SetFieldMapping(fieldMapping FieldMapping) {
 	var mapping = make(FieldMapping, 3)
 
 	// first add the custom mappings
 	for k, v := range fieldMapping {
 		if strings.HasPrefix(v, "@") {
 			fmt.Fprintf(os.Stderr, "value cannot be prefixed with @: %s", v)
-			os.Exit(1)
 		}
 		mapping[k] = v
 	}
@@ -85,9 +85,9 @@ func (j JSONFormatter) Format(w io.Writer, logLevel LogLevel, msg string, timest
 // formatter when creating a instance of wlog.
 type TextFormatter struct{}
 
-func (j TextFormatter) AddMapping(fieldMapping FieldMapping) {
+// SetFieldMapping add custom field mapping for structured log
+func (j TextFormatter) SetFieldMapping(fieldMapping FieldMapping) {
 	fmt.Fprintf(os.Stderr, "mapping fields is only supported by JSONFormatter")
-	os.Exit(0)
 }
 
 // Format Implements Formatter.Format to support Text

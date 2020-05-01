@@ -111,7 +111,7 @@ type MutableLogger interface {
 	SetFields(fields Fields)
 	SetLogLevel(logLevel LogLevel)
 	Configure(cfg *Config)
-	AddFieldMapping(fieldMapping FieldMapping)
+	SetFieldMapping(fieldMapping FieldMapping)
 }
 
 // Fields is a map containing the fields that will be added to every log entry
@@ -142,11 +142,11 @@ func (l *logger) unlock() {
 	l.mutex.Unlock()
 }
 
-// AddFieldMapping add custom field mapping for structured log
-func (l *logger) AddFieldMapping(fieldMapping FieldMapping) {
+// SetFieldMapping add custom field mapping for structured log
+func (l *logger) SetFieldMapping(fieldMapping FieldMapping) {
 	l.lock()
 	defer l.unlock()
-	l.formatter.AddMapping(fieldMapping)
+	l.formatter.SetFieldMapping(fieldMapping)
 }
 
 // Configure configures a mutable logger
@@ -444,9 +444,9 @@ func InstallHook(logLevel LogLevel, hook HookFunc) {
 	defaultLogger.InstallHook(logLevel, hook)
 }
 
-// AddFieldMapping add custom field mapping for structured log
-func AddFieldMapping(fieldMapping FieldMapping) {
-	defaultLogger.AddFieldMapping(fieldMapping)
+// SetFieldMapping add custom field mapping for structured log
+func SetFieldMapping(fieldMapping FieldMapping) {
+	defaultLogger.SetFieldMapping(fieldMapping)
 }
 
 // SetFormatter sets the formatter to be used when outputting log entries
