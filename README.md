@@ -151,13 +151,13 @@ In the example above if the option `Compact` was set to `false`, then the field 
 Note: When creating `FieldMapping`, the name of field can't be prefixed with the symbol `@`, since it is reserved
 for default fields like `@t` (timestamp), `@l` (level) and `@m` (message). 
 
-To add new mappings after the logger initialization, use the `AddFieldMapping` function, eg:
+To add new mappings after the logger initialization, use the `SetFieldMapping` function, eg:
 
 ```go
 wlog.SetFormatter(wlog.JSONFormatter{Compact: true, FieldMapping: FieldMapping{"username", "un"})
 scopedLogger = wlog.WithFields(wlog.Fields{"username": "test", "firstname": "John", "lastname": "Smith"})
 
-wlog.AddFieldMapping(wlog.FieldMapping{"firstname": "fn", "lastname": "ln"})
+wlog.SetFieldMapping(wlog.FieldMapping{"firstname": "fn", "lastname": "ln"})
 
 scopedLogger.Info("This is a log entry")
 ```
