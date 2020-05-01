@@ -24,8 +24,11 @@ type JSONFormatter struct {
 	Compact      bool
 }
 
-func (j JSONFormatter) getKey(key string) string {
+func (j JSONFormatter) getKey(key string, isCustomField bool) string {
 	if j.Compact {
+		if !isCustomField {
+			return "@" + key[:1]
+		}
 		var mappedKey string
 		var ok bool
 
@@ -63,14 +66,14 @@ func (j JSONFormatter) Format(w io.Writer, logLevel LogLevel, msg string, timest
 
 	// Standard fields
 	out := Fields{
-		"@m": msg,
-		"@t": getTimestamp(timestamp),
-		"@l": logLevel.String(),
+		j.getKey("message", false): msg,
+		j.getKey("timestamp", false): getTimestamp(timestamp),
+		j.getKey("level", false): logLevel.String(),
 	}
 
 	// And any custom ones
 	for k, v := range fields {
-		out[j.getKey(k)] = v
+		out[j.getKey(k, true)] = v
 	}
 
 	encoder := json.NewEncoder(w)
