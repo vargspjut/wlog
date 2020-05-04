@@ -40,7 +40,7 @@ func TestJSONFormatter(t *testing.T) {
 
 			buf := &bytes.Buffer{}
 
-			if err := logger.GetFormatter().Format(buf, Nfo, "test value", now, logger.GetFields()); err != nil {
+			if err := logger.GetFormatter().Format(buf, Nfo, "test value", now, logger.GetFields(), logger.GetFieldMapping()); err != nil {
 				t.Fatalf("failed to format the log entry, err: %s", err)
 			}
 

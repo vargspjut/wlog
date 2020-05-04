@@ -6,7 +6,6 @@ import (
 	"fmt"
 	"io"
 	"os"
-	"strings"
 	"time"
 )
 
@@ -14,17 +13,15 @@ import (
 // one method called Format which will be called when outputting
 // the write entry
 type Formatter interface {
-	Format(w io.Writer, logLevel LogLevel, msg string, timestamp time.Time, fields Fields) error
-	SetFieldMapping(fieldMapping FieldMapping)
+	Format(w io.Writer, logLevel LogLevel, msg string, timestamp time.Time, fields Fields, fieldMapping FieldMapping) error
 }
 
 // JSONFormatter used to output logs in JSON format
 type JSONFormatter struct {
-	FieldMapping FieldMapping
-	Compact      bool
+	Compact bool
 }
 
-func (j JSONFormatter) getKey(key string, isCustomField bool) string {
+func (j JSONFormatter) getKey(key string, fieldMapping FieldMapping, isCustomField bool) string {
 	if j.Compact {
 		if !isCustomField {
 			return "@" + key[:1]
@@ -32,7 +29,7 @@ func (j JSONFormatter) getKey(key string, isCustomField bool) string {
 		var mappedKey string
 		var ok bool
 
-		if mappedKey, ok = j.FieldMapping[key]; !ok {
+		if mappedKey, ok = fieldMapping[key]; !ok {
 			mappedKey = key
 		}
 
@@ -41,39 +38,19 @@ func (j JSONFormatter) getKey(key string, isCustomField bool) string {
 	return key
 }
 
-// SetFieldMapping add custom field mapping for structured log
-func (j *JSONFormatter) SetFieldMapping(fieldMapping FieldMapping) {
-	var mapping = make(FieldMapping, 3)
-
-	// first add the custom mappings
-	for k, v := range fieldMapping {
-		if strings.HasPrefix(v, "@") {
-			fmt.Fprintf(os.Stderr, "value cannot be prefixed with @: %s", v)
-		}
-		mapping[k] = v
-	}
-
-	// add the default mappings
-	for k, v := range j.FieldMapping {
-		mapping[k] = v
-	}
-
-	j.FieldMapping = mapping
-}
-
 // Format implements Formatter.Format to support JSON
-func (j JSONFormatter) Format(w io.Writer, logLevel LogLevel, msg string, timestamp time.Time, fields Fields) error {
+func (j JSONFormatter) Format(w io.Writer, logLevel LogLevel, msg string, timestamp time.Time, fields Fields, fieldMapping FieldMapping) error {
 
 	// Standard fields
 	out := Fields{
-		j.getKey("message", false): msg,
-		j.getKey("timestamp", false): getTimestamp(timestamp),
-		j.getKey("level", false): logLevel.String(),
+		j.getKey("message", fieldMapping, false):   msg,
+		j.getKey("timestamp", fieldMapping, false): getTimestamp(timestamp),
+		j.getKey("level", fieldMapping, false):     logLevel.String(),
 	}
 
 	// And any custom ones
 	for k, v := range fields {
-		out[j.getKey(k, true)] = v
+		out[j.getKey(k, fieldMapping, true)] = v
 	}
 
 	encoder := json.NewEncoder(w)
@@ -88,13 +65,8 @@ func (j JSONFormatter) Format(w io.Writer, logLevel LogLevel, msg string, timest
 // formatter when creating a instance of wlog.
 type TextFormatter struct{}
 
-// SetFieldMapping add custom field mapping for structured log
-func (j TextFormatter) SetFieldMapping(fieldMapping FieldMapping) {
-	fmt.Fprintf(os.Stderr, "mapping fields is only supported by JSONFormatter")
-}
-
 // Format Implements Formatter.Format to support Text
-func (t TextFormatter) Format(w io.Writer, logLevel LogLevel, msg string, timestamp time.Time, fields Fields) error {
+func (t TextFormatter) Format(w io.Writer, logLevel LogLevel, msg string, timestamp time.Time, fields Fields, fieldMapping FieldMapping) error {
 
 	// Write date and time
 	writeString(w, getTimestamp(timestamp))

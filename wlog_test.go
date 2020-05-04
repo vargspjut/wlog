@@ -36,9 +36,8 @@ func TestHooks(t *testing.T) {
 
 func TestFieldMapping(t *testing.T) {
 
-	SetFormatter(&JSONFormatter{
-		FieldMapping: FieldMapping{"tenantId": "tid"},
-		Compact:      true,
+	SetFormatter(JSONFormatter{
+		Compact: true,
 	})
 
 	SetStdOut(false)
@@ -47,7 +46,7 @@ func TestFieldMapping(t *testing.T) {
 
 	SetWriter(w)
 
-	SetFieldMapping(FieldMapping{"name": "n", "address": "addr"})
+	SetFieldMapping(FieldMapping{"name": "n", "address": "addr", "tenantId": "tid"})
 
 	logger := WithScope(Fields{"tenantId": "1223456", "name": "user", "address": "my street"})
 

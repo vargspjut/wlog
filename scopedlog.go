@@ -23,12 +23,17 @@ func (s *scopedLogger) GetFields() Fields {
 	return s.fields
 }
 
+// GetFieldMapping implements Logger.GetFields
+func (s *scopedLogger) GetFieldMapping() FieldMapping {
+	return s.logger.fieldMapping
+}
+
 // Debugf formats and logs a debug message
 func (s *scopedLogger) Debugf(format string, v ...interface{}) {
 	if Dbg < s.GetLogLevel() {
 		return
 	}
-	s.logger.writeWithFields(Dbg, fmt.Sprintf(format, v...), s.fields)
+	s.logger.writeWithFields(Dbg, fmt.Sprintf(format, v...), s.fields, s.GetFieldMapping())
 }
 
 // Debug logs a debug message
@@ -36,48 +41,48 @@ func (s *scopedLogger) Debug(v ...interface{}) {
 	if Dbg < s.GetLogLevel() {
 		return
 	}
-	s.logger.writeWithFields(Dbg, fmt.Sprint(v...), s.fields)
+	s.logger.writeWithFields(Dbg, fmt.Sprint(v...), s.fields, s.GetFieldMapping())
 }
 
 // Infof formats and logs an informal message
 func (s *scopedLogger) Infof(format string, v ...interface{}) {
-	s.logger.writeWithFields(Nfo, fmt.Sprintf(format, v...), s.fields)
+	s.logger.writeWithFields(Nfo, fmt.Sprintf(format, v...), s.fields, s.GetFieldMapping())
 }
 
 // Info logs an informal message
 func (s *scopedLogger) Info(v ...interface{}) {
-	s.logger.writeWithFields(Nfo, fmt.Sprint(v...), s.fields)
+	s.logger.writeWithFields(Nfo, fmt.Sprint(v...), s.fields, s.GetFieldMapping())
 }
 
 // Warningf formats and logs a warning message
 func (s *scopedLogger) Warningf(format string, v ...interface{}) {
-	s.logger.writeWithFields(Wrn, fmt.Sprintf(format, v...), s.fields)
+	s.logger.writeWithFields(Wrn, fmt.Sprintf(format, v...), s.fields, s.GetFieldMapping())
 }
 
 // Warning logs a warning message
 func (s *scopedLogger) Warning(v ...interface{}) {
-	s.logger.writeWithFields(Wrn, fmt.Sprint(v...), s.fields)
+	s.logger.writeWithFields(Wrn, fmt.Sprint(v...), s.fields, s.GetFieldMapping())
 }
 
 // Errorf formats and logs an error message
 func (s *scopedLogger) Errorf(format string, v ...interface{}) {
-	s.logger.writeWithFields(Err, fmt.Sprintf(format, v...), s.fields)
+	s.logger.writeWithFields(Err, fmt.Sprintf(format, v...), s.fields, s.GetFieldMapping())
 }
 
 // Error logs an error message
 func (s *scopedLogger) Error(v ...interface{}) {
-	s.logger.writeWithFields(Err, fmt.Sprint(v...), s.fields)
+	s.logger.writeWithFields(Err, fmt.Sprint(v...), s.fields, s.GetFieldMapping())
 }
 
 // Fatalf formats and logs an unrecoverable error message
 func (s *scopedLogger) Fatalf(format string, v ...interface{}) {
-	s.logger.writeWithFields(Ftl, fmt.Sprintf(format, v...), s.fields)
+	s.logger.writeWithFields(Ftl, fmt.Sprintf(format, v...), s.fields, s.GetFieldMapping())
 	os.Exit(1)
 }
 
 // Fatal logs an unrecoverable error message
 func (s *scopedLogger) Fatal(v ...interface{}) {
-	s.logger.writeWithFields(Ftl, fmt.Sprint(v...), s.fields)
+	s.logger.writeWithFields(Ftl, fmt.Sprint(v...), s.fields, s.GetFieldMapping())
 	os.Exit(1)
 }
 
