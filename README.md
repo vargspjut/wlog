@@ -134,6 +134,28 @@ Note that, the default fields `level`, `timestamp` and `message` are renamed to 
 with a `@` symbol. The `Compact` property in the `JsonFormatter` is optional and it is set to `false`
 by default.
 
+### Field mapping
+When using JSON compact format it is possible to customize the name of fields using the `FieldMapping`, eg:
+
+```go
+wlog.SetFormatter(wlog.JSONFormatter{Compact: true})
+wlog.SetFieldMapping(wlog.FieldMapping{"firstname": "fn", "lastname": "ln", "username", "usr"})
+
+scopedLogger = wlog.WithFields(wlog.Fields{"username": "test", "firstname": "John", "lastname": "Smith"})
+
+scopedLogger.Info("This is a log entry")
+```
+
+Output:
+```json
+{"@l":"Info","@m":"This is a log entry","@t":"2020-02-05 12:19:30:163927","usr":"test", "fn": "John", "ln":  "Smith"}
+``` 
+
+Fields that are not mapped will be shown in a non-compact manner.
+
+Note: When creating `FieldMapping`, the name of field can't be prefixed with the symbol `@`, since it is reserved
+for default fields like `@t` (timestamp), `@l` (level) and `@m` (message). 
+
 ## Test
 ```
 go test

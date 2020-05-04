@@ -13,7 +13,7 @@ import (
 // one method called Format which will be called when outputting
 // the write entry
 type Formatter interface {
-	Format(w io.Writer, logLevel LogLevel, msg string, timestamp time.Time, fields Fields) error
+	Format(w io.Writer, logLevel LogLevel, msg string, timestamp time.Time, fields Fields, fieldMapping FieldMapping) error
 }
 
 // JSONFormatter used to output logs in JSON format
@@ -21,26 +21,36 @@ type JSONFormatter struct {
 	Compact bool
 }
 
-func (j JSONFormatter) getKey(key string) string {
+func (j JSONFormatter) getKey(key string, fieldMapping FieldMapping, isCustomField bool) string {
 	if j.Compact {
-		return "@" + key[:1]
+		if !isCustomField {
+			return "@" + key[:1]
+		}
+		var mappedKey string
+		var ok bool
+
+		if mappedKey, ok = fieldMapping[key]; !ok {
+			mappedKey = key
+		}
+
+		return mappedKey
 	}
 	return key
 }
 
 // Format implements Formatter.Format to support JSON
-func (j JSONFormatter) Format(w io.Writer, logLevel LogLevel, msg string, timestamp time.Time, fields Fields) error {
+func (j JSONFormatter) Format(w io.Writer, logLevel LogLevel, msg string, timestamp time.Time, fields Fields, fieldMapping FieldMapping) error {
 
 	// Standard fields
 	out := Fields{
-		j.getKey("msg"):       msg,
-		j.getKey("timestamp"): getTimestamp(timestamp),
-		j.getKey("level"):     logLevel.String(),
+		j.getKey("message", fieldMapping, false):   msg,
+		j.getKey("timestamp", fieldMapping, false): getTimestamp(timestamp),
+		j.getKey("level", fieldMapping, false):     logLevel.String(),
 	}
 
 	// And any custom ones
 	for k, v := range fields {
-		out[k] = v
+		out[j.getKey(k, fieldMapping, true)] = v
 	}
 
 	encoder := json.NewEncoder(w)
@@ -56,7 +66,7 @@ func (j JSONFormatter) Format(w io.Writer, logLevel LogLevel, msg string, timest
 type TextFormatter struct{}
 
 // Format Implements Formatter.Format to support Text
-func (t TextFormatter) Format(w io.Writer, logLevel LogLevel, msg string, timestamp time.Time, fields Fields) error {
+func (t TextFormatter) Format(w io.Writer, logLevel LogLevel, msg string, timestamp time.Time, fields Fields, fieldMapping FieldMapping) error {
 
 	// Write date and time
 	writeString(w, getTimestamp(timestamp))

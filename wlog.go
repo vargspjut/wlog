@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"io"
 	"os"
+	"strings"
 	"sync"
 	"time"
 )
@@ -62,11 +63,12 @@ func init() {
 
 func newLogger(writer io.Writer, logLevel LogLevel, stdOut bool) *logger {
 	return &logger{
-		writer:    writer,
-		logLevel:  logLevel,
-		stdOut:    stdOut,
-		formatter: TextFormatter{},
-		fields:    Fields{},
+		writer:       writer,
+		logLevel:     logLevel,
+		stdOut:       stdOut,
+		formatter:    TextFormatter{},
+		fields:       Fields{},
+		fieldMapping: FieldMapping{"level": "@l", "timestamp": "@t", "message": "@m"},
 	}
 }
 
@@ -92,6 +94,7 @@ type Logger interface {
 	Fatalf(format string, v ...interface{})
 	Fatal(v ...interface{})
 	GetFields() Fields
+	GetFieldMapping() FieldMapping
 	GetLogLevel() LogLevel
 	GetFormatter() Formatter
 	WithScope(fields Fields) Logger
@@ -106,7 +109,12 @@ type MutableLogger interface {
 	SetFields(fields Fields)
 	SetLogLevel(logLevel LogLevel)
 	Configure(cfg *Config)
+	SetFieldMapping(fieldMapping FieldMapping)
 }
+
+// FieldMapping is used to map field names when using
+// JSONFormatter in compact mode
+type FieldMapping map[string]string
 
 // Fields is a map containing the fields that will be added to every log entry
 type Fields map[string]interface{}
@@ -115,13 +123,14 @@ type Fields map[string]interface{}
 // providing the default logger instance as well
 // as the base for new loggers created with New()
 type logger struct {
-	writer    io.Writer
-	logLevel  LogLevel
-	stdOut    bool
-	mutex     sync.Mutex
-	hooks     map[LogLevel][]HookFunc
-	fields    Fields
-	formatter Formatter
+	writer       io.Writer
+	logLevel     LogLevel
+	stdOut       bool
+	mutex        sync.Mutex
+	hooks        map[LogLevel][]HookFunc
+	fields       Fields
+	formatter    Formatter
+	fieldMapping FieldMapping
 }
 
 var bufferPool = sync.Pool{New: func() interface{} {
@@ -134,6 +143,30 @@ func (l *logger) lock() {
 
 func (l *logger) unlock() {
 	l.mutex.Unlock()
+}
+
+// SetFieldMapping add custom field mapping for structured log
+func (l *logger) SetFieldMapping(fieldMapping FieldMapping) {
+	l.lock()
+	defer l.unlock()
+
+	var mapping = make(FieldMapping, 3)
+
+	// first add the custom mappings
+	for k, v := range fieldMapping {
+		if strings.HasPrefix(v, "@") {
+			fmt.Fprintf(os.Stderr, "value cannot be prefixed with @: %s", v)
+		}
+		mapping[k] = v
+	}
+
+	// add the default mappings
+	for k, v := range l.fieldMapping {
+		mapping[k] = v
+	}
+
+	l.fieldMapping = mapping
+
 }
 
 // Configure configures a mutable logger
@@ -287,10 +320,10 @@ func (l *logger) InstallHook(logLevel LogLevel, hook HookFunc) {
 }
 
 func (l *logger) write(logLevel LogLevel, msg string) {
-	l.writeWithFields(logLevel, msg, l.GetFields())
+	l.writeWithFields(logLevel, msg, l.GetFields(), l.GetFieldMapping())
 }
 
-func (l *logger) writeWithFields(logLevel LogLevel, msg string, fields Fields) {
+func (l *logger) writeWithFields(logLevel LogLevel, msg string, fields Fields, fieldMapping FieldMapping) {
 	now := time.Now()
 
 	entryBuffer := bufferPool.Get().(*bytes.Buffer)
@@ -300,7 +333,7 @@ func (l *logger) writeWithFields(logLevel LogLevel, msg string, fields Fields) {
 	l.lock()
 	defer l.unlock()
 
-	if err := l.formatter.Format(entryBuffer, logLevel, msg, now, fields); err != nil {
+	if err := l.formatter.Format(entryBuffer, logLevel, msg, now, fields, fieldMapping); err != nil {
 		fmt.Fprintf(os.Stderr, "error formatting the log entry: %v", err)
 	}
 
@@ -368,6 +401,11 @@ func (l *logger) GetFields() Fields {
 	return l.fields
 }
 
+// GetFields implements Logger.GetFieldMapping
+func (l *logger) GetFieldMapping() FieldMapping {
+	return l.fieldMapping
+}
+
 // SetStdOut sets or clears writing to standard output
 func (l *logger) SetStdOut(enable bool) {
 	l.lock()
@@ -429,6 +467,11 @@ func Fatal(v ...interface{}) {
 // that will be called when a log event occurs
 func InstallHook(logLevel LogLevel, hook HookFunc) {
 	defaultLogger.InstallHook(logLevel, hook)
+}
+
+// SetFieldMapping add custom field mapping for structured log
+func SetFieldMapping(fieldMapping FieldMapping) {
+	defaultLogger.SetFieldMapping(fieldMapping)
 }
 
 // SetFormatter sets the formatter to be used when outputting log entries

@@ -19,11 +19,11 @@ func TestJSONFormatter(t *testing.T) {
 	}{
 		{
 			"Parse to JSON",
-			args{JSONFormatter{}},
+			args{&JSONFormatter{}},
 			`{"field1":"test value","level":"Info","msg":"test value","timestamp":"%s"}`},
 		{
 			"Parse to JSON with compact fields",
-			args{JSONFormatter{Compact: true}},
+			args{&JSONFormatter{Compact: true}},
 			`{"@l":"Info","@m":"test value","@t":"%s","field1":"test value"}`,
 		},
 	}
@@ -40,7 +40,7 @@ func TestJSONFormatter(t *testing.T) {
 
 			buf := &bytes.Buffer{}
 
-			if err := logger.GetFormatter().Format(buf, Nfo, "test value", now, logger.GetFields()); err != nil {
+			if err := logger.GetFormatter().Format(buf, Nfo, "test value", now, logger.GetFields(), logger.GetFieldMapping()); err != nil {
 				t.Fatalf("failed to format the log entry, err: %s", err)
 			}
 
