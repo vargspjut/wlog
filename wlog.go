@@ -17,6 +17,7 @@ type Config struct {
 	TruncateOnStart bool
 	StdOut          bool
 	Formatter       Formatter
+	Writer          io.Writer
 }
 
 // LogLevel controls how verbose the output will be
@@ -195,7 +196,7 @@ func (l *logger) Configure(cfg *Config) {
 
 		l.SetWriter(file)
 	} else {
-		l.SetWriter(nil)
+		l.SetWriter(cfg.Writer)
 	}
 }
 
@@ -337,10 +338,10 @@ func (l *logger) writeWithFields(logLevel LogLevel, msg string, fields Fields, f
 		fmt.Fprintf(os.Stderr, "error formatting the log entry: %v", err)
 	}
 
-	// Write to file if provided
+	// Write to io.Writer if provided
 	if l.writer != nil {
 		if _, err := l.writer.Write(entryBuffer.Bytes()); err != nil {
-			fmt.Fprintf(os.Stderr, "could not write log entry to the file, err: %v", err)
+			fmt.Fprintf(os.Stderr, "could not write log entry to io.Writer: %v", err)
 		}
 	}
 

@@ -1,5 +1,5 @@
 # wlog
-A simple golang logger with log-level, hooks and structured logging capabilities. Wlog also supports split-output to both stdout and optionally a file.
+A simple golang logger with log-level, hooks and structured logging capabilities. Wlog also supports split-output to both stdout and optionally a io.Writer.
 
 Available log-levels:
 - Debug
