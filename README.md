@@ -1,5 +1,5 @@
 # wlog
-A golang logger with log-level, hooks and structured logging capabilities. Wlog also supports split-output to both stdout and optionally to a io.Writer. In addition, wlog can serve as a front-end for systemd's journal. See [systemd-journal](https://github.com/vargspjut/systemd-journal) for an example. 
+A golang logger with log-level, hooks and structured logging capabilities. Wlog also supports split-output to both stdout and optionally to a io.Writer. In addition, wlog can serve as a front-end to systemd's journal. See [systemd-journal](https://github.com/vargspjut/systemd-journal) for an example.
 
 Available log-levels:
 - Debug
