@@ -146,7 +146,7 @@ func getTimestamp(timestamp time.Time) string {
 	writeString(w, ":")
 	itoa(w, timestamp.Nanosecond()/1e3, 6)
 
-	return string(w.Bytes())
+	return w.String()
 }
 
 func writeString(w io.Writer, str string) {

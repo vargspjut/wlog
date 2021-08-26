@@ -111,6 +111,7 @@ type MutableLogger interface {
 	SetLogLevel(logLevel LogLevel)
 	Configure(cfg *Config)
 	SetFieldMapping(fieldMapping FieldMapping)
+	InstallHook(logLevel LogLevel, hook HookFunc)
 }
 
 // FieldMapping is used to map field names when using
