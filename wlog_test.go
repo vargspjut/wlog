@@ -11,22 +11,16 @@ func TestHooks(t *testing.T) {
 
 	// Install a hook to catch all NFO (Info) messages
 	InstallHook(Nfo, func(timestamp time.Time, logLevel LogLevel, message string) {
-
 		if logLevel != Nfo {
 			t.Fatalf("Expected %s but got %s", Nfo, logLevel)
 		}
-
-		println("Hook: " + message)
 	})
 
 	// Install a hook to catch all WRN (Warning) messages
 	InstallHook(Wrn, func(timestamp time.Time, logLevel LogLevel, message string) {
-
 		if logLevel != Wrn {
 			t.Fatalf("Expected %s but got %s", Wrn, logLevel)
 		}
-
-		println("Hook: " + message)
 	})
 
 	Info("This is a NFO log entry")
@@ -65,5 +59,95 @@ func TestFieldMapping(t *testing.T) {
 			t.Fatalf("should contain a key: %s", k)
 		}
 	}
+}
 
+func TestLogLevel(t *testing.T) {
+
+	txt := "data"
+
+	SetStdOut(false)
+
+	w := &bytes.Buffer{}
+
+	SetWriter(w)
+
+	SetLogLevel(Dbg)
+	Debug(txt)
+	if w.Len() == 0 {
+		t.Fatalf("expected log output")
+	}
+
+	w.Reset()
+	Info(txt)
+	if w.Len() == 0 {
+		t.Fatalf("expected log output")
+	}
+
+	SetLogLevel(Nfo)
+	w.Reset()
+	Debug(txt)
+	if w.Len() > 0 {
+		t.Fatalf("unexpected log output")
+	}
+
+	w.Reset()
+	Info(txt)
+	if w.Len() == 0 {
+		t.Fatalf("expected log output")
+	}
+
+	w.Reset()
+	Warningf(txt)
+	if w.Len() == 0 {
+		t.Fatalf("expected log output")
+	}
+
+	SetLogLevel(Ftl)
+	w.Reset()
+	Debug(txt)
+	if w.Len() > 0 {
+		t.Fatalf("unexpected log output")
+	}
+
+	w.Reset()
+	Debugf(txt)
+	if w.Len() > 0 {
+		t.Fatalf("unexpected log output")
+	}
+
+	w.Reset()
+	Info(txt)
+	if w.Len() > 0 {
+		t.Fatalf("unexpected log output")
+	}
+
+	w.Reset()
+	Infof(txt)
+	if w.Len() > 0 {
+		t.Fatalf("unexpected log output")
+	}
+
+	w.Reset()
+	Warning(txt)
+	if w.Len() > 0 {
+		t.Fatalf("unexpected log output")
+	}
+
+	w.Reset()
+	Warningf(txt)
+	if w.Len() > 0 {
+		t.Fatalf("unexpected log output")
+	}
+
+	w.Reset()
+	Error(txt)
+	if w.Len() > 0 {
+		t.Fatalf("unexpected log output")
+	}
+
+	w.Reset()
+	Errorf(txt)
+	if w.Len() > 0 {
+		t.Fatalf("unexpected log output")
+	}
 }

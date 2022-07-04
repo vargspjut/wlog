@@ -326,6 +326,12 @@ func (l *logger) write(logLevel LogLevel, msg string) {
 }
 
 func (l *logger) writeWithFields(logLevel LogLevel, msg string, fields Fields, fieldMapping FieldMapping) {
+
+	// Ignore write if severity level is less than configured level
+	if logLevel < l.logLevel {
+		return
+	}
+
 	now := time.Now()
 
 	entryBuffer := bufferPool.Get().(*bytes.Buffer)
