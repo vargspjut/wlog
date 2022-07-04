@@ -491,6 +491,11 @@ func SetLogLevel(logLevel LogLevel) {
 	defaultLogger.SetLogLevel(logLevel)
 }
 
+// GetLogLevel returns the log level of the default logger
+func GetLogLevel() LogLevel {
+	return defaultLogger.GetLogLevel()
+}
+
 // SetStdOut sets or clears writing to standard output of the default logger
 func SetStdOut(enable bool) {
 	defaultLogger.SetStdOut(enable)
