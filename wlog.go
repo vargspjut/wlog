@@ -326,6 +326,12 @@ func (l *logger) write(logLevel LogLevel, msg string) {
 }
 
 func (l *logger) writeWithFields(logLevel LogLevel, msg string, fields Fields, fieldMapping FieldMapping) {
+
+	// Ignore write if severity level is less than configured level
+	if logLevel < l.logLevel {
+		return
+	}
+
 	now := time.Now()
 
 	entryBuffer := bufferPool.Get().(*bytes.Buffer)
@@ -489,6 +495,11 @@ func SetWriter(writer io.Writer) {
 // SetLogLevel sets the log level of the default logger
 func SetLogLevel(logLevel LogLevel) {
 	defaultLogger.SetLogLevel(logLevel)
+}
+
+// GetLogLevel returns the log level of the default logger
+func GetLogLevel() LogLevel {
+	return defaultLogger.GetLogLevel()
 }
 
 // SetStdOut sets or clears writing to standard output of the default logger
